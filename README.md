@@ -1,2 +1,2 @@
-# three_point_arch
-Blender add-on for creating arches
+# Three Point Arch Tool
+A Blender add-on for creating arches.
