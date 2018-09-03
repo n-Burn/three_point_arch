@@ -65,7 +65,7 @@ bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
     "version": (0, 0, 1),
-    "blender": (2, 7, 7),
+    "blender": (2, 77, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
     "category": "Mesh"
