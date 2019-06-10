@@ -19,7 +19,7 @@ END GPL LICENSE BLOCK
 
 #============================================================================
 
- [Stage]    [Event that ends stage] 
+ [Stage]    [Event that ends stage]
 * Stage 0 - No points placed, add-on just launched and is initializing
 * Stage 1 - 1st point placed
 * Stage 2 - 2nd point placed (1st to 2nd point is arc width)
@@ -118,7 +118,6 @@ class Colr:
 # Defines the settings part in the addons tab:
 class TPArchPrefs(bpy.types.AddonPreferences):
     bl_idname = __name__
-    bl_options = {'INTERNAL'}
 
     np_scale_dist = bpy.props.FloatProperty(
         name='',
@@ -137,7 +136,8 @@ class TPArchPrefs(bpy.types.AddonPreferences):
             ('def_blender_gray', 'TP_Arch_Default_Theme','')),
         default = 'def_blender_gray',
         #default = 'csc_default_grey',
-        description = 'Choose the overall addon color scheme, according to your current Blender theme')
+        description = 'Choose the overall addon color scheme, according to " + \
+                "your current Blender theme')
     '''
 
     np_suffix_dist = bpy.props.EnumProperty(
@@ -162,24 +162,24 @@ class TPArchPrefs(bpy.types.AddonPreferences):
         layout = self.layout
         # split 50 / 50, then split 50 to 60 / 40
         row1 = layout.row()
-        r1_spl = row1.split(percentage=0.6)  # 60% of 50%
-        r1_spl.label(text="Unit scale for distance")
-        r1_spl.prop(self, "np_scale_dist")  # 40% of 50%
-        r1_sp2 = row1.split(percentage=0.6)  # 60% of 50%
-        r1_sp2.label(text="Unit suffix for distance")
-        r1_sp2.prop(self, "np_suffix_dist")
+        r1_sl = row1.split(percentage=0.6)  # 60% of 50%
+        r1_sl.label(text="Unit scale for distance")
+        r1_sl.prop(self, "np_scale_dist")  # 40% of 50%
+        r1_s2 = row1.split(percentage=0.6)  # 60% of 50%
+        r1_s2.label(text="Unit suffix for distance")
+        r1_s2.prop(self, "np_suffix_dist")
 
         row2 = layout.row()
-        r2_spl = row2.split(percentage=0.5)
-        r2_spl.prop(self, "segm_cnt")  # 50%
-        r2_spl.prop(self, "extr_enabled", text="Enable extrude")
-        #r2_spl_s = r2_spl.split(percentage=0.3)
-        #r2_spl_s.label(text="Color scheme")
-        #r2_spl_s.prop(self, "np_col_scheme")
-        
+        r2_sl = row2.split(percentage=0.5)
+        r2_sl.prop(self, "segm_cnt")  # 50%
+        r2_sl.prop(self, "extr_enabled", text="Enable extrude")
+        #r2_sl_s = r2_sl.split(percentage=0.3)
+        #r2_sl_s.label(text="Color scheme")
+        #r2_sl_s.prop(self, "np_col_scheme")
+
         #row3 = layout.row()
-        #r3_spl = row3.split(percentage=0.5)
-        #r3_spl.prop(self, "extr_enabled", text="Enable extrude")
+        #r3_sl = row3.split(percentage=0.5)
+        #r3_sl.prop(self, "extr_enabled", text="Enable extrude")
 
 
 def backup_blender_settings():
@@ -236,9 +236,9 @@ class DrawMeanDistance:
 
         p1_2d = loc3d_to_reg2d(self.reg, self.rv3d, pts_3d[0])
         p2_2d = loc3d_to_reg2d(self.reg, self.rv3d, pts_3d[1])
-        
+
         draw_line_2D(p1_2d, p2_2d, Colr.white)
-        
+
         if p1_2d is None:
             p1_2d = 0.0, 0.0
             p2_2d = 0.0, 0.0
@@ -271,7 +271,7 @@ class DrawMeanDistance:
             blf.size(self.font_id, self.size, self.dpi)
             blf.position(self.font_id, dist_loc[0], dist_loc[1], 0)
             blf.draw(self.font_id, dist)
-            
+
             blf.disable(self.font_id, blf.SHADOW)
 
         # To-Do : if displaying measurements for multiple dimensions
@@ -285,38 +285,38 @@ class DrawSegmCounter:
         self.dpi = settings["dpi"]
         self.desc_str = "Arch segments"
         self.desc_size = 16
-        self.cnt_size = 32
-        self.desc_co_offs = None 
-        self.cnt_co_offs = None 
+        self.seg_cnt_size = 32
+        self.desc_co_offs = None
+        self.seg_cnt_co_offs = None
         self.desc_colr = settings["col_font_instruct_main"]
-        self.cnt_colr = settings["col_font_instruct_main"]
+        self.seg_cnt_colr = settings["col_font_instruct_main"]
         self.shdcolr = settings["col_font_instruct_shadow"]
         self.shdoffs = -1, -1  # shadow offset
         self.font_id = 0
-        
+
         d_b_offs =  Vector((10, 24))  # description base offset
         c_b_offs =  Vector((5, 6))  # count base offset
         blf.size(self.font_id, self.desc_size, self.dpi)
         desc_dim = Vector(blf.dimensions(self.font_id, self.desc_str))
 
-        #desc_x_hf = 
+        #desc_x_hf =
         self.desc_co_offs = Vector((-desc_dim[X] - d_b_offs[X], d_b_offs[Y]))
-        self.cnt_co_offs = Vector((c_b_offs[X], desc_dim[Y] + c_b_offs[Y]))
+        self.seg_cnt_co_offs = Vector((c_b_offs[X], desc_dim[Y] + c_b_offs[Y]))
 
     def draw(self, cnt, co):
         if co is None:
             return
         desc_co = co + self.desc_co_offs
-        cnt_co = desc_co + self.cnt_co_offs
+        seg_cnt_co = desc_co + self.seg_cnt_co_offs
 
         bgl.glColor4f(*self.desc_colr)
         blf.size(self.font_id, self.desc_size, self.dpi)
         blf.position(self.font_id, desc_co[0], desc_co[1], 0)
         blf.draw(self.font_id, self.desc_str)
 
-        bgl.glColor4f(*self.cnt_colr)
-        blf.size(self.font_id, self.cnt_size, self.dpi)
-        blf.position(self.font_id, cnt_co[0], cnt_co[1], 0)
+        bgl.glColor4f(*self.seg_cnt_colr)
+        blf.size(self.font_id, self.seg_cnt_size, self.dpi)
+        blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
 
 
@@ -333,184 +333,184 @@ def draw_text(dpi, text, pos, size, colr):
 class HelpText:
     def get_size(self):
         blf.size(self.font_id, self.size, self.dpi)
-        self.wid, self.hgt = blf.dimensions(self.font_id, self.otxt)
+        self.wid, self.hgt = blf.dimensions(self.font_id, self.origtxt)
 
-    def __init__(self, text, sz, dpi, h_a, colr, shdcolr):
+    def __init__(self, text, size, dpi, h_a, colr, shdcolr):
         self.dpi = dpi
-        self.otxt = text # original text string
-        self.dtxt = [text]  # displayed text
-        self.size = sz
+        self.origtxt = text  # original text string
+        self.disptxt = [text]  # displayed text
+        self.size = size
         self.colr = colr  # color / colour
         self.shad = False  # text shadow enabled?
         self.shad_colr = shdcolr
-        self.h_aln = h_a  # horizontal alignment (L/R/C, C only instr)
+        #self.horz_aln = h_a  # horizontal alignment (L/R/C, C only instr)
         self.wid = 0  # width
         self.hgt = 0  # height
         self.font_id = 0
         self.crop = False
-        self.vis = True  # visible
+        self.viz = True  # visible
         self.pos = []  # position
-        self.pos2 = []
+        self.ovrfl_pos = []
         self.ovrfl = False
 
         self.get_size()
-        
-        
+
+
     def draw_wrapper(self):
-        if self.vis is True:
-            if self.shad is True:
-                shblr = 3  # shadow blur
-                shoffs = -1, -1
+        if self.viz:
+            if self.shad:
+                shdblur = 3  # shadow blur
+                shdoffs = -1, -1
                 blf.enable(self.font_id, blf.SHADOW)
-                blf.shadow(self.font_id, shblr, *self.shad_colr)
-                blf.shadow_offset(self.font_id, shoffs[X], shoffs[Y])
+                blf.shadow(self.font_id, shdblur, *self.shad_colr)
+                blf.shadow_offset(self.font_id, shdoffs[X], shdoffs[Y])
                 self.draw()
                 blf.disable(self.font_id, blf.SHADOW)
             else:
                 self.draw()
-    
+
     def draw(self):
         bgl.glColor4f(*self.colr)
         blf.size(self.font_id, self.size, self.dpi)
-        p = self.pos
-        blf.position(self.font_id, p[0], p[1], 0)
-        blf.draw(self.font_id, self.dtxt[0])
-        if self.ovrfl is True:
-            p2 = self.pos2
+        p1 = self.pos
+        blf.position(self.font_id, p1[0], p1[1], 0)
+        blf.draw(self.font_id, self.disptxt[0])
+        if self.ovrfl:
+            p2 = self.ovrfl_pos
             blf.position(self.font_id, p2[0], p2[1], 0)
-            blf.draw(self.font_id, self.dtxt[1])
+            blf.draw(self.font_id, self.disptxt[1])
 
 
 class HelpBar:
     #def __init__(self, col , disp=True):
     def __init__(self):
-        self.bdisp = False # display bar?
+        #self.disp_bar = False # display bar?
         self.colr = None  # bar color
-        self.htxts = []  # help text objects
-        self.tcnt = 0  # text count
-        self.bcnt = 1  # bar count
+        self.help_txts = []  # number of help text objects
+        self.txtcnt = 0  # text count
+        self.barcnt = 1  # bar count
         #self.wid = 0  # bar width
-        self.mt_wid = 0  # max text width
+        self.max_txt_wid = 0  # max text width
         self.hgt = 0  # bar height
-        self.bdry = [ [], [] ]  # bar positions
-        self.vis = True  # is bar or its contents visible
+        self.bndry = [ [], [] ]  # bar positions
+        self.viz = True  # is bar or its contents visible
         self.x_off = 0  # x offset
         self.y_off = 0
-        self.bar_yoff = 3  # y offset
+        self.bar_y_off = 3  # y offset
         self.extend = False
         #self.crop = False
 
     def clear(self):
-        self.htxts = []
-        self.tcnt = 0
-        self.bcnt = 1
+        self.help_txts = []
+        self.txtcnt = 0
+        self.barcnt = 1
         self.extend = False
-        
-    def set_sizes(self, bwid):
-        if self.htxts != []:
-            dpi = self.htxts[0].dpi
+
+    def set_sizes(self, barwid):
+        if self.help_txts != []:
+            dpi = self.help_txts[0].dpi
             font_id = 0
-            szs = [i.size for i in self.htxts]
-            max_size = max(szs)
+            sizes = [i.size for i in self.help_txts]
+            max_size = max(sizes)
             blf.size(font_id, max_size, dpi)
-            x, mx_y =  blf.dimensions(0, "Tgp")
+            x, max_y =  blf.dimensions(0, "Tgp")
             y = blf.dimensions(0, "T")[1]
             hgt_mult = 1.6  # multiplier for bar heigt
-            self.hgt = int(mx_y * hgt_mult)
+            self.hgt = int(max_y * hgt_mult)
             self.x_off = int(x / 2)
-            hoff_mult = (2 - hgt_mult) / 2
-            self.y_off = int((mx_y * hoff_mult) + (mx_y - y))
-            self.mt_wid = bwid - (self.x_off * 2)  # max text width
+            hgtoff_mult = (2 - hgt_mult) / 2
+            self.y_off = int((max_y * hgtoff_mult) + (max_y - y))
+            self.max_txt_wid = barwid - (self.x_off * 2)
 
             # make sure text fits, if not don't display
             tot_width = 0
-            for i in self.htxts:
+            for i in self.help_txts:
                 tot_width += i.wid
-                i.vis = True
-            if tot_width > self.mt_wid:
-                for i in self.htxts:
-                    if i.wid < int(self.mt_wid / 2):
-                        i.vis = True
+                i.viz = True
+            if tot_width > self.max_txt_wid:
+                for i in self.help_txts:
+                    if i.wid < int(self.max_txt_wid / 2):
+                        i.viz = True
                     else:
                         i.vis = False
-            
+
             '''
             tot_w = 0
-            for i in self.htxts: tot_w += i.wid + self.x_off
-            if tot_w > self.mt_wid:
+            for i in self.help_txts: tot_w += i.wid + self.x_off
+            if tot_w > self.max_txt_wid:
                 self.extend = True
-                if tot_w > (self.mt_wid * 2):
+                if tot_w > (self.max_txt_wid * 2):
                     self.crop = True
             '''
-        
+
     def fit(self):
-        htxt = self.htxts[0]
-        htxt.vis = True
-        dpi = self.htxts[0].dpi
-        if htxt.wid < self.mt_wid:
-            self.bcnt = 1
-            htxt.dtxt = [htxt.otxt]
-            htxt.ovrfl = False
+        helptxt = self.help_txts[0]
+        helptxt.viz = True
+        dpi = self.help_txts[0].dpi
+        if helptxt.wid < self.max_txt_wid:
+            self.barcnt = 1
+            helptxt.disptxt = [helptxt.origtxt]
+            helptxt.ovrfl = False
             self.extend = False
         else:
-            font_id = htxt.font_id
-            str_segs = htxt.otxt.split(',')
+            font_id = helptxt.font_id
+            str_segs = helptxt.origtxt.split(',')
             out_str = ['']
-            s_cnt = 0  # text string count
+            str_cnt = 0  # text string count
             seg_cnt = len(str_segs)
             re_add = ([','] * (seg_cnt - 1)) + ['']
-            blf.size(font_id, htxt.size, dpi)
+            blf.size(font_id, helptxt.size, dpi)
             blf_dim = blf.dimensions
             for i in range(seg_cnt):
                 tmp_str = str_segs[i] + re_add[i]
-                tmp_w = blf_dim(font_id, tmp_str)[0]
-                os_w = blf_dim(font_id, out_str[s_cnt])[0]
-                if (os_w + tmp_w) > self.mt_wid:
-                    if s_cnt > 0: 
+                tmp_wid = blf_dim(font_id, tmp_str)[0]
+                os_wid = blf_dim(font_id, out_str[str_cnt])[0]
+                if (os_wid + tmp_wid) > self.max_txt_wid:
+                    if str_cnt > 0:
                         break
                     else:
                         out_str.append('')
                         tmp_str = tmp_str.strip()
-                        s_cnt += 1
-                out_str[s_cnt] += tmp_str
-            htxt.dtxt = out_str
-            self.bcnt = 2
-            htxt.ovrfl = True
+                        str_cnt += 1
+                out_str[str_cnt] += tmp_str
+            helptxt.disptxt = out_str
+            self.barcnt = 2
+            helptxt.ovrfl = True
             self.extend = True
 
     # get bar coordinates
     def get_bar_co(self, lf, ri, bt, tp):
         return [(lf, bt), (lf, tp), (ri, tp), (ri, bt)]
 
-    def set_txt_pos(self, bx_l, bx_r, bx_b):
-        if self.tcnt > 0:  # left align
-            self.htxts[0].pos = bx_l + self.x_off, bx_b + self.y_off
-        if self.tcnt > 1:  # right align
-            ht1wid = self.htxts[1].wid
-            self.htxts[1].pos = bx_r - self.x_off - ht1wid, bx_b + self.y_off
-        if self.extend is True:
-            self.htxts[0].pos2 = self.htxts[0].pos
-            bx_b2 = bx_b + self.hgt + self.bar_yoff
-            self.htxts[0].pos = bx_l + self.x_off, bx_b2 + self.y_off
-    
-    def set_co(self, left, right, btm):  # bdry = boundary
+    def set_txt_pos(self, bx_lf, bx_ri, bx_bt):
+        if self.txtcnt > 0:  # left align
+            self.help_txts[0].pos = bx_lf + self.x_off, bx_bt + self.y_off
+        if self.txtcnt > 1:  # right align
+            ht_1_wid = self.help_txts[1].wid
+            self.help_txts[1].pos = bx_ri - self.x_off - ht_1_wid, bx_bt + self.y_off
+        if self.extend:
+            self.help_txts[0].ovrfl_pos = self.help_txts[0].pos
+            bx_bt2 = bx_bt + self.hgt + self.bar_y_off
+            self.help_txts[0].pos = bx_lf + self.x_off, bx_bt2 + self.y_off
+
+    def set_co(self, left, right, btm):  # bndry = boundary
         top = btm + self.hgt
-        self.bdry[0] = self.get_bar_co(left, right, btm, top)
+        self.bndry[0] = self.get_bar_co(left, right, btm, top)
         self.set_txt_pos(left, right, btm)
-        if self.extend is True:
-            btm2 = top + self.bar_yoff
+        if self.extend:
+            btm2 = top + self.bar_y_off
             top2 = btm2 + self.hgt
-            self.bdry[1] = self.get_bar_co(left, right, btm2, top2)
+            self.bndry[1] = self.get_bar_co(left, right, btm2, top2)
 
     def draw(self):
         bgl.glColor4f(*self.colr)
-        for b in range(self.bcnt):
+        for b in range(self.barcnt):
             bgl.glBegin(bgl.GL_TRIANGLE_FAN)
-            for co in self.bdry[b]:
+            for co in self.bndry[b]:
                 bgl.glVertex2f(*co)
             bgl.glEnd()
 
-        for i in self.htxts:
+        for i in self.help_txts:
             i.draw_wrapper()
 
 
@@ -521,48 +521,48 @@ class HelpDisplay:
         self.ruiw = 0  # region UI width
         self.rgwid = 0  # region width
         self.rghgt = 0  # region width
-        #self.bcnt = 2  # bar count
-        self.siz = None  # text sizes
-        self.clr = None  # text colors
+        #self.barcnt = 2  # bar count
+        #self.siz = None  # text sizes
+        #self.txtcolr = None  # text colors
         self.pos = None  # text positions
         self.instr = None  # instructions
-        self.btop = HelpBar()  # bar top
-        self.bbot = HelpBar()
+        self.bartop = HelpBar()  # bar top
+        self.barbot = HelpBar()
         self.bar_w = 0  # bar width
-        self.vis = False  # is gui visible?
+        self.viz = False  # is gui visible?
         self.dispbars = False  # display bars?
         self.settings = settings
 
-        self.btop.colr = self.settings["col_field_keys_aff"]
-        self.bbot.colr = self.settings["col_field_keys_neg"]
+        self.bartop.colr = self.settings["col_field_keys_aff"]
+        self.barbot.colr = self.settings["col_field_keys_neg"]
 
     # always have to do full update after string change as
     # there is no guarantee string will not be split
     def clear_str(self):
         self.instr = None
-        self.btop.htxts = []
-        self.btop.tcnt = 0
-        self.bbot.htxts = []
-        self.bbot.tcnt = 0
+        self.bartop.help_txts = []
+        self.bartop.txtcnt = 0
+        self.barbot.help_txts = []
+        self.barbot.txtcnt = 0
 
-    def add_str(self, htype, txt, size, aln, colr=None, shdcolr=None):
+    def add_str(self, help_typ, txt, size, align, colr=None, shdcolr=None):
         dpi = self.settings["dpi"]
-        if htype == "INS":
+        if help_typ == "INS":
             colr = self.settings["col_font_instruct_main"]
             shdcolr = self.settings["col_font_instruct_shadow"]
             self.instr = HelpText(
-                txt, size, dpi, aln, colr, shdcolr)
+                txt, size, dpi, align, colr, shdcolr)
             self.instr.shad = True
-        elif htype == "TOP":
+        elif help_typ == "TOP":
             colr = self.settings["col_font_keys"]
-            self.btop.htxts.append(HelpText(
-                txt, size, dpi, aln, colr, shdcolr))
-            self.btop.tcnt += 1
-        elif htype == "BOT":
+            self.bartop.help_txts.append(HelpText(
+                txt, size, dpi, align, colr, shdcolr))
+            self.bartop.txtcnt += 1
+        elif help_typ == "BOT":
             colr = self.settings["col_font_keys"]
-            self.bbot.htxts.append(HelpText(
-                txt, size, dpi, aln, colr, shdcolr))
-            self.bbot.tcnt += 1
+            self.barbot.help_txts.append(HelpText(
+                txt, size, dpi, align, colr, shdcolr))
+            self.barbot.txtcnt += 1
 
     def new_vals(self):
         rtoolsw = 0
@@ -577,7 +577,8 @@ class HelpDisplay:
                     elif r.type == 'UI':
                         ruiw = r.width
 
-        if self.rtoolsw != rtoolsw or self.ruiw != ruiw or self.rgwid != self.reg.width or self.rghgt != self.reg.height:
+        if self.rtoolsw != rtoolsw or self.ruiw != ruiw or \
+                self.rgwid != self.reg.width or self.rghgt != self.reg.height:
             self.rtoolsw = rtoolsw
             self.ruiw = ruiw
             self.rgwid = self.reg.width
@@ -589,7 +590,7 @@ class HelpDisplay:
     def update(self):
         logo_w = 30
         reg_w, reg_h = self.rgwid, self.rghgt
-        tools_w, ui_w = self.rtoolsw, self.ruiw
+        r_tools_w, r_ui_w = self.rtoolsw, self.ruiw
         offs_x = 60  # to avoid blocking xyz graphic (110 on tablet, desk 60)
         offs_y = 40  # 46
         bar_bar_y_offs = 3
@@ -597,58 +598,57 @@ class HelpDisplay:
         min_view_h = logo_w * 5  # view3d height minimum
         min_gui_w = 480  # bar width minimum
         min_gui_h = 280  # bar height minimum
-        view_w = reg_w - tools_w - ui_w
+        view_w = reg_w - r_tools_w - r_ui_w
         self.bar_w = (view_w - offs_x) * 0.96
-        
+
         if view_w > min_view_w and reg_h > min_view_h:
-            self.vis = True
+            self.viz = True
             if view_w > min_gui_w and reg_h > min_gui_h:
                 self.dispbars = True
 
                 # set bar properties
-                for i in (self.btop, self.bbot):
+                for i in (self.bartop, self.barbot):
                     i.set_sizes(self.bar_w)
-                self.btop.fit()
+                self.bartop.fit()
 
-                lb = tools_w + offs_x  # left border
-                bar_x_beg = int(lb + ((view_w - self.bar_w - offs_x) / 2))
+                left_brdr = r_tools_w + offs_x  # left border
+                bar_x_beg = int(left_brdr + ((view_w - self.bar_w - offs_x) / 2))
                 bar_x_end = bar_x_beg + self.bar_w
-                self.bbot.set_co(bar_x_beg, bar_x_end, offs_y)
-                
-                bt_y = self.bbot.bdry[0][1][1] + bar_bar_y_offs
-                self.btop.set_co(bar_x_beg, bar_x_end, bt_y)
+                self.barbot.set_co(bar_x_beg, bar_x_end, offs_y)
+
+                barbot_y = self.barbot.bndry[0][1][1] + bar_bar_y_offs
+                self.bartop.set_co(bar_x_beg, bar_x_end, barbot_y)
 
                 # set instructions properties
                 instr_max = (view_w - logo_w) * 0.9
                 if self.instr.wid < instr_max:
-                    self.instr.vis = True
+                    self.instr.viz = True
                 else:
-                    self.instr.vis = False
+                    self.instr.viz = False
 
-                top_of_top_bar = self.btop.bdry[0][1][1]
-                instr_x = tools_w + view_w / 2 - self.instr.wid / 2 + logo_w / 2
+                top_of_top_bar = self.bartop.bndry[0][1][1]
+                instr_x = r_tools_w + view_w / 2 - self.instr.wid / 2 + logo_w / 2
                 self.instr.pos = [
                     int(instr_x),
-                    int(top_of_top_bar + (self.btop.hgt * 2))]
+                    int(top_of_top_bar + (self.bartop.hgt * 2))]
 
             else:
                 self.dispbars = False
 
         else:
-            self.vis = False
+            self.viz = False
 
     def draw(self):
-        if self.new_vals() is True:
+        if self.new_vals():
             self.update()
-        if self.vis is True:
+        if self.viz:
             #font_id = 0
             #draw_logo()
 
-            if self.dispbars is True:
+            if self.dispbars:
                 self.instr.draw_wrapper()
-                self.btop.draw()
-                self.bbot.draw()
-
+                self.bartop.draw()
+                self.barbot.draw()
 
 
 def get_rotated_pt(piv_co, mov_co, ang_rad, piv_norm):
@@ -731,11 +731,11 @@ class SnapPoint():
         region = bpy.context.region
         rv3d = bpy.context.region_data
 
+        # make sure converted mouse location is visible from the 3D view,
+        # if not, use less accurate alternative for getting mouses 3D coordinates
         mouse_vec3d = reg2d_to_vec3d(region, rv3d, mouse_loc)
         enterloc = reg2d_to_loc3d(region, rv3d, mouse_loc, mouse_vec3d)
         test2d = loc3d_to_reg2d(region, rv3d, enterloc)
-        # make sure converted mouse location is visible from the 3D view,
-        # if not, use less accurate alternative for getting mouses 3D coordinates
         if test2d is None:
             persp_md_fix = mouse_vec3d / 5
             enterloc = reg2d_to_org3d(region, rv3d, mouse_loc) + persp_md_fix
@@ -745,7 +745,7 @@ class SnapPoint():
     def create(self, ms_loc_2d, ed_type):
         ms_loc_3d = self.get_mouse_3d(ms_loc_2d)
         if ed_type == 'OBJECT':
-            bpy.ops.object.add(type = 'MESH', location = ms_loc_3d)
+            bpy.ops.object.add(type='MESH', location=ms_loc_3d)
             self.point = bpy.context.object
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
@@ -820,8 +820,6 @@ def exit_addon(self):
     #print("self.curr_ed_type", self.curr_ed_type)  # debug
     #print("self.stage", self.stage)  # debug
     #print("self.force_quit", self.force_quit)  # debug
-    if self.force_quit is True:
-        self.snap.remove(self.curr_ed_type, self.sel_backup)
     restore_blender_settings(self.settings_backup)
     #print("\n\nAdd-On Exited!\n")  # debug
 
@@ -842,11 +840,11 @@ def warp_cursor(self, context, dest_co):
 
 # called when self.stage == PLACE_3RD
 def update_arch(self, snap):
-    if self.pause is True:
+    if self.paused:
         return
 
     self.piv_norm = geometry.normal(self.pts[0], self.cent, snap)
-    
+
     # exit function if piv_norm or snap have values that prevent rotations
     if self.piv_norm == Vector() or snap in self.pts:
         self.bad_input = True
@@ -862,12 +860,12 @@ def update_arch(self, snap):
     rot_neg = rot_neg + self.cent
 
     hgt = (snap - self.cent).length
-    rad = None  # radius
+    radius = None
     if hgt != 0:
-        rad = (hgt / 2) + (self.wid**2) / (8 * hgt)
+        radius = (hgt / 2) + (self.wid**2) / (8 * hgt)
     else:
-        rad = 0
-    cen_to_piv = rad - hgt
+        radius = 0
+    cen_to_piv = radius - hgt
     scale = cen_to_piv / (self.wid / 2)
     circ_cen_p = self.cent.lerp(rot_pos, scale)
     circ_cen_n = self.cent.lerp(rot_neg, scale)
@@ -880,7 +878,7 @@ def update_arch(self, snap):
     else:
         self.bad_input = False
 
-    if rad > self.wid/2 and hgt > rad:
+    if radius > self.wid/2 and hgt > radius:
         self.ang_meas = 2 * pi - self.ang_meas
 
     dist_sn_to_pos = (rot_pos - snap).length
@@ -898,7 +896,7 @@ def update_arch(self, snap):
 def click_handler(self, context):
     snap = self.snap.get_co(self.curr_ed_type)
 
-    if self.pause is True:
+    if self.paused:
         return
 
     elif self.stage == PLACE_1ST:
@@ -926,7 +924,7 @@ def click_handler(self, context):
 
     elif self.stage == PLACE_3RD:
         # draw_arch
-        if self.bad_input is False:
+        if not self.bad_input:
             update_gui(self)
             add_pt(self, snap)
             self.stage += 1
@@ -937,7 +935,7 @@ def click_handler(self, context):
             inv_mw = bpy.context.scene.objects[0].matrix_world.inverted()
             piv_cent = inv_mw * self.circ_cen
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
-            bm.verts.new( inv_mw * self.new_pts[0] )
+            bm.verts.new(inv_mw * self.new_pts[0])
             # Spin and deal with geometry on side 'a'
             edges_start_a = bm.edges[:]
             geom_start_a = bm.verts[:] + edges_start_a
@@ -951,7 +949,7 @@ def click_handler(self, context):
             #edges_end_a = [ele for ele in ret["geom_last"]
             #        if isinstance(ele, bmesh.types.BMEdge)]
             del ret
-            if self.extr_enabled is False:
+            if not self.extr_enabled:
                 self.stage = EXIT
             else:
                 bpy.context.scene.cursor_location = self.circ_cen
@@ -960,12 +958,13 @@ def click_handler(self, context):
                 bpy.context.space_data.transform_orientation = 'GLOBAL'
                 bpy.ops.mesh.select_all(action='SELECT')
                 bpy.ops.mesh.extrude_region_move()
-                bpy.ops.transform.resize('INVOKE_DEFAULT', constraint_orientation = 'GLOBAL')
-                
+                bpy.ops.transform.resize('INVOKE_DEFAULT',
+                        constraint_orientation='GLOBAL')
+
                 self.stage = ARCH_EXTRUDE_1
         else:
             self.snap.grab(self.curr_ed_type)
-            
+
     elif self.stage == ARCH_EXTRUDE_1:
         update_gui(self)
         bpy.ops.mesh.select_all(action='SELECT')
@@ -981,117 +980,117 @@ def update_gui(self):
     title_txt_sz = 24
     bar_txt_sz = 12
     #bar_txt_sz = 18  # tablet
-    self.hdisp.clear_str()
-    if self.pause is False:
+    self.helpdisp.clear_str()
+    if not self.paused:
         if self.stage < ARCH_EXTRUDE_1:
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "INS",
                 "place 3 points to create arch",
                 title_txt_sz,
                 'C')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "TOP",
                 "LMB - place point, CTRL - snap point, "
                 "XYZ - add axis lock, C - clear axis lock",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "SPACE - pause to navigate / change settings",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "ESC, RMB - quit",
                 bar_txt_sz,
                 'R')
         elif self.stage == ARCH_EXTRUDE_1:
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "INS",
                 "set arch width / thickness",
                 title_txt_sz,
                 'C')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "TOP",
                 "LMB - confirm width",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "ESC, RMB - quit",
                 bar_txt_sz,
                 'R')
         else:
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "INS",
                 "set arch length",
                 title_txt_sz,
                 'C')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "TOP",
                 "LMB - confirm length, CTRL - snap point",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "ESC, RMB - quit",
                 bar_txt_sz,
                 'R')
     else:
         if self.stage < ARCH_EXTRUDE_1:
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "INS",
                 "paused, navigate or change settings",
                 title_txt_sz,
                 'C')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "TOP",
-                "UP / MSW_UP - increase segments, "
-                "DOWN / MSW_DOWN - decrease segments",
+                "UP / MSWH_UP - increase segments, "
+                "DOWN / MSWH_DOWN - decrease segments",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "SPACE - resume point placement, R - reset point placement",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "ESC, RMB - quit",
                 bar_txt_sz,
                 'R')
         else:
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "INS",
                 "paused, navigate to better position",
                 title_txt_sz,
                 'C')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "TOP",
                 "",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "SPACE - resume extrude",
                 bar_txt_sz,
                 'L')
-            self.hdisp.add_str(
+            self.helpdisp.add_str(
                 "BOT",
                 "ESC, RMB - quit",
                 bar_txt_sz,
                 'R')
-    self.hdisp.update()
+    self.helpdisp.update()
 
 
 def retreive_settings(arg):
@@ -1164,7 +1163,8 @@ def retreive_settings(arg):
             col_bg_fill_main_run = (1.0, 0.5, 0.0, 1.0),
             col_bg_fill_main_nav = (0.5, 0.75 ,0.0 ,1.0),
             col_bg_fill_square = (0.0, 0.0, 0.0, 1.0),
-            col_bg_fill_aux = (0.4, 0.15, 0.75, 1.0), #(0.4, 0.15, 0.75, 1.0) (0.2, 0.15, 0.55, 1.0)
+            col_bg_fill_aux = (0.4, 0.15, 0.75, 1.0),
+                    #(0.4, 0.15, 0.75, 1.0) (0.2, 0.15, 0.55, 1.0) ?
             col_bg_line_symbol = (1.0, 1.0, 1.0, 1.0),
             col_bg_font_main = (1.0, 1.0, 1.0, 1.0),
             col_bg_font_aux = (1.0, 1.0, 1.0, 1.0)
@@ -1229,14 +1229,16 @@ def draw_callback_px(self, context):
     elif self.stage == PLACE_3RD:
         guide2d = loc3d_to_reg2d(reg, rv3d, snap)
         pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in self.pts]
-        
+
         # attempt to draw arch
         update_arch(self, snap)
-        if self.bad_input is not True and self.circ_cen is not None:
-            arch_top = get_rotated_pt(self.circ_cen, self.new_pts[0], self.ang_meas/2, self.piv_norm)
+        if not self.bad_input and self.circ_cen is not None:
+            arch_top = get_rotated_pt(self.circ_cen, self.new_pts[0],
+                    self.ang_meas/2, self.piv_norm)
             line_pts = self.cent, arch_top
 
-            draw_circ_arch_3D(self.segm_cnt, self.new_pts, self.circ_cen, self.ang_meas, self.piv_norm, Colr.green, reg, rv3d)
+            draw_circ_arch_3D(self.segm_cnt, self.new_pts, self.circ_cen,
+                    self.ang_meas, self.piv_norm, Colr.green, reg, rv3d)
         else:
             if len(pts2d) > 1:
                 draw_line_2D(pts2d[0], pts2d[1], Colr.white)
@@ -1253,7 +1255,7 @@ def draw_callback_px(self, context):
         v1 = m_w * vts[v_cent1_idx].co
         v2 = m_w * vts[v_cent2_idx].co
         line_pts = v1, v2
-        
+
         pts_cust = self.pts[0], self.pts[1], v1
         pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in pts_cust]
         guide2d = loc3d_to_reg2d(reg, rv3d, v2)
@@ -1274,19 +1276,18 @@ def draw_callback_px(self, context):
         guide2d = loc3d_to_reg2d(reg, rv3d, v2)
 
     if line_pts != []:
-        ms_mult, ms_suf = self.meas_mult, self.meas_suff
-        self.mean_dist.draw(line_pts, ms_mult, ms_suf)
+        self.mean_dist.draw(line_pts, self.meas_mult, self.meas_suff)
     for i in pts2d:
         draw_pt_2D(i, Colr.white)
     draw_pt_2D(guide2d, Colr.green)
 
     # display number of segments
-    if self.pause is True and self.stage < ARCH_EXTRUDE_1:
+    if self.paused and self.stage < ARCH_EXTRUDE_1:
         if guide2d is not None:
             self.segm_cntr.draw(self.segm_cnt, guide2d)
             #self.segm_cntr.draw(self.segm_cnt, self.mouse_loc)
 
-    self.hdisp.draw()
+    self.helpdisp.draw()
 
 
 # To-Do : move to DrawSegmCounter?
@@ -1320,20 +1321,24 @@ class ModalArchTool(bpy.types.Operator):
             click_handler(self, context)
 
         if event.type == 'SPACE' and event.value == 'RELEASE':
-            if self.pause is False:
-                self.pause = True
+            if not self.paused:
+                self.paused = True
                 update_gui(self)
             else:
-                self.pause = False
+                self.paused = False
                 update_gui(self)
                 if self.stage < ARCH_EXTRUDE_1:
                     self.snap.grab(self.curr_ed_type)
                 elif self.stage == ARCH_EXTRUDE_1:
-                    bpy.ops.transform.resize('INVOKE_DEFAULT', constraint_orientation = 'GLOBAL')
+                    bpy.ops.transform.resize('INVOKE_DEFAULT',
+                            constraint_orientation = 'GLOBAL')
                 else:
-                    bpy.ops.transform.translate('INVOKE_DEFAULT', constraint_axis=(False, False, True), constraint_orientation='NORMAL', release_confirm=True)
+                    bpy.ops.transform.translate('INVOKE_DEFAULT',
+                            constraint_axis=(False, False, True),
+                            constraint_orientation='NORMAL',
+                            release_confirm=True)
 
-        if self.pause is True:
+        if self.paused:
             if self.stage < ARCH_EXTRUDE_1:
                 if event.type == 'WHEELUPMOUSE':
                     self.segm_cnt += 1
@@ -1348,7 +1353,7 @@ class ModalArchTool(bpy.types.Operator):
                     segm_decrm(self)
 
             if event.type == 'R' and event.value == 'RELEASE':
-                self.pause = False
+                self.paused = False
                 update_gui(self)
                 if self.prev_co is not None:
                     last2d = loc3d_to_reg2d(self.reg, self.rv3d, self.prev_co)
@@ -1358,18 +1363,17 @@ class ModalArchTool(bpy.types.Operator):
                 else:
                     self.snap.mouse_grab(self.mouse_loc, self.curr_ed_type)
 
+        # start debug console
         '''
         if event.type == 'D' and event.value == 'RELEASE':
-            # start debug console
             __import__('code').interact(local=dict(globals(), **locals()))
         '''
 
         if event.type in {'ESC', 'RIGHTMOUSE'} and event.value == 'RELEASE':
-            self.force_quit = True
             #print("pressed ESC or RIGHTMOUSE")  # debug
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             exit_addon(self)
-            return {'CANCELLED'} 
+            return {'CANCELLED'}
 
         if self.stage == EXIT:
             if self.curr_ed_type == 'EDIT_MESH':
@@ -1379,7 +1383,7 @@ class ModalArchTool(bpy.types.Operator):
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             exit_addon(self)
             return {'FINISHED'}
-            
+
         return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
@@ -1394,12 +1398,12 @@ class ModalArchTool(bpy.types.Operator):
             if context.mode == 'EDIT_MESH':
                 bpy.ops.object.editmode_toggle()
             bpy.ops.object.select_all(action='DESELECT')
-            
+
             addon_prefs = context.user_preferences.addons[__name__].preferences
             #sett_dict = retreive_settings(addon_prefs.np_col_scheme)
             sett_dict = retreive_settings("def_blender_gray")
 
-            self.hdisp = HelpDisplay(context.region, sett_dict)
+            self.helpdisp = HelpDisplay(context.region, sett_dict)
             self.mean_dist = DrawMeanDistance(18, sett_dict)
             self.segm_cntr = DrawSegmCounter(sett_dict)
             self.curr_ed_type = context.mode  # current Blender Editor Type
@@ -1426,8 +1430,8 @@ class ModalArchTool(bpy.types.Operator):
             self.sel_backup = None  # place holder
             self.bad_input = False
             self.extr_enabled = addon_prefs.extr_enabled
-            self.debug_flag = False
-            self.pause = False
+            #self.debug_flag = False
+            self.paused = False
             self.force_quit = False
 
             tmp_suff = addon_prefs.np_suffix_dist
@@ -1455,11 +1459,10 @@ class TPArchPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
     bl_context = 'objectmode'
     bl_category = 'Tools'
-    bl_options = {'INTERNAL'}
 
     def draw(self, context):
         #layout = self.layout
-        row = self.layout.row(True)
+        row = self.layout.row(align=True)
         row.operator("view3d.modal_arch_tool", text="Create Arch", icon="SPHERECURVE")
 
 
@@ -1469,10 +1472,9 @@ def register():
     bpy.utils.register_class(TPArchPanel)
 
 def unregister():
-    bpy.utils.unregister_class(TPArchPrefs)
-    bpy.utils.unregister_class(ModalArchTool)
     bpy.utils.unregister_class(TPArchPanel)
+    bpy.utils.unregister_class(ModalArchTool)
+    bpy.utils.unregister_class(TPArchPrefs)
 
 if __name__ == "__main__":
     register()
-
