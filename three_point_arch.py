@@ -40,7 +40,7 @@ To-Do
 [X] Option to show measurements?
 [?] Better shortcut info, make sure helpdisplay up to date
 [_] Option to change color scheme? NP Station color scheme?
-[_] Better DPI argument handling for font drawing
+[?] Better DPI argument handling for font drawing
 [_] Make OBJECT / EDIT mode switching less error prone (wrap in function?)
 [X] Find out why arch mesh isn't deleted if addon exited during extrudes
 [?] Find way to display measurments for last 2 extrudes
@@ -64,7 +64,7 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 0, 1),
+    "version": (0, 0, 2),
     "blender": (2, 77, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
@@ -190,7 +190,8 @@ def backup_blender_settings():
         deepcopy(bpy.context.space_data.pivot_point),
         deepcopy(bpy.context.space_data.transform_orientation),
         deepcopy(bpy.context.space_data.show_manipulator),
-        deepcopy(bpy.context.scene.cursor_location)]
+        deepcopy(bpy.context.scene.cursor_location),
+        deepcopy(bpy.context.tool_settings.mesh_select_mode[:])]
     return backup
 
 
@@ -198,9 +199,11 @@ def init_blender_settings():
     bpy.context.tool_settings.use_snap = False
     bpy.context.tool_settings.snap_element = 'VERTEX'
     bpy.context.tool_settings.snap_target = 'CLOSEST'
+    #bpy.context.tool_settings.snap_target = 'ACTIVE'
     bpy.context.space_data.pivot_point = 'ACTIVE_ELEMENT'
     bpy.context.space_data.transform_orientation = 'GLOBAL'
     bpy.context.space_data.show_manipulator = False
+    bpy.context.tool_settings.mesh_select_mode = True, False, False
     return
 
 
@@ -212,6 +215,7 @@ def restore_blender_settings(backup):
     bpy.context.space_data.transform_orientation = deepcopy(backup[4])
     bpy.context.space_data.show_manipulator = deepcopy(backup[5])
     bpy.context.scene.cursor_location = deepcopy(backup[6])
+    bpy.context.tool_settings.mesh_select_mode = deepcopy(backup[7])
     return
 
 
@@ -219,7 +223,7 @@ class DrawMeanDistance:
     def __init__(self, sz, settings):
         self.reg = bpy.context.region
         self.rv3d = bpy.context.region_data
-        self.dpi = settings["dpi"]
+        self.dpi = bpy.context.user_preferences.system.dpi
         self.size = sz
         self.txtcolr = settings["col_num_main"]
         self.shdcolr = settings["col_num_shadow"]
@@ -252,8 +256,8 @@ class DrawMeanDistance:
                     res += i
             return res / 2
 
-        mean_x = get_pts_mean( (p1_2d[X], p2_2d[X]), self.reg.width )
-        mean_y = get_pts_mean( (p1_2d[Y], p2_2d[Y]), self.reg.height )
+        mean_x = get_pts_mean((p1_2d[X], p2_2d[X]), self.reg.width)
+        mean_y = get_pts_mean((p1_2d[Y], p2_2d[Y]), self.reg.height)
         offset = 5, 5
         shblr = 3  # shadow blur
         dist_loc = mean_x + offset[X], mean_y + offset[Y]
@@ -282,7 +286,7 @@ class DrawMeanDistance:
 
 class DrawSegmCounter:
     def __init__(self, settings):
-        self.dpi = settings["dpi"]
+        self.dpi = bpy.context.user_preferences.system.dpi
         self.desc_str = "Arch segments"
         self.desc_size = 16
         self.seg_cnt_size = 32
@@ -319,7 +323,7 @@ class DrawSegmCounter:
         blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
 
-
+'''
 # debug?
 def draw_text(dpi, text, pos, size, colr):
     if pos is not None:
@@ -328,15 +332,15 @@ def draw_text(dpi, text, pos, size, colr):
         blf.size(font_id, size, dpi)
         blf.position(font_id, pos[0], pos[1], 0)
         blf.draw(font_id, text)
-
+'''
 
 class HelpText:
     def get_size(self):
         blf.size(self.font_id, self.size, self.dpi)
         self.wid, self.hgt = blf.dimensions(self.font_id, self.origtxt)
 
-    def __init__(self, text, size, dpi, h_a, colr, shdcolr):
-        self.dpi = dpi
+    def __init__(self, text, size, h_a, colr, shdcolr):
+        self.dpi = bpy.context.user_preferences.system.dpi
         self.origtxt = text  # original text string
         self.disptxt = [text]  # displayed text
         self.size = size
@@ -386,7 +390,7 @@ class HelpBar:
     def __init__(self):
         #self.disp_bar = False # display bar?
         self.colr = None  # bar color
-        self.help_txts = []  # number of help text objects
+        self.help_txts = []  # help text objects
         self.txtcnt = 0  # text count
         self.barcnt = 1  # bar count
         #self.wid = 0  # bar width
@@ -546,22 +550,21 @@ class HelpDisplay:
         self.barbot.txtcnt = 0
 
     def add_str(self, help_typ, txt, size, align, colr=None, shdcolr=None):
-        dpi = self.settings["dpi"]
         if help_typ == "INS":
             colr = self.settings["col_font_instruct_main"]
             shdcolr = self.settings["col_font_instruct_shadow"]
             self.instr = HelpText(
-                txt, size, dpi, align, colr, shdcolr)
+                txt, size, align, colr, shdcolr)
             self.instr.shad = True
         elif help_typ == "TOP":
             colr = self.settings["col_font_keys"]
             self.bartop.help_txts.append(HelpText(
-                txt, size, dpi, align, colr, shdcolr))
+                txt, size, align, colr, shdcolr))
             self.bartop.txtcnt += 1
         elif help_typ == "BOT":
             colr = self.settings["col_font_keys"]
             self.barbot.help_txts.append(HelpText(
-                txt, size, dpi, align, colr, shdcolr))
+                txt, size, align, colr, shdcolr))
             self.barbot.txtcnt += 1
 
     def new_vals(self):
@@ -966,6 +969,10 @@ def click_handler(self, context):
             self.snap.grab(self.curr_ed_type)
 
     elif self.stage == ARCH_EXTRUDE_1:
+        bpy.context.tool_settings.mesh_select_mode = False, False, True
+        #bpy.context.space_data.transform_orientation = 'LOCAL'
+        bpy.context.tool_settings.snap_target = 'CLOSEST'
+        bpy.context.space_data.pivot_point = 'MEDIAN_POINT'
         update_gui(self)
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.view3d.edit_mesh_extrude_move_normal('INVOKE_DEFAULT')
@@ -1095,7 +1102,7 @@ def update_gui(self):
 
 def retreive_settings(arg):
     settings_dict = {}
-    settings_dict['dpi'] = bpy.context.user_preferences.system.dpi
+    #settings_dict['dpi'] = bpy.context.user_preferences.system.dpi
     if arg == "csc_default_grey":
         settings_dict.update(
             col_font_np = (0.95, 0.95, 0.95, 1.0),
@@ -1367,6 +1374,13 @@ class ModalArchTool(bpy.types.Operator):
         '''
         if event.type == 'D' and event.value == 'RELEASE':
             __import__('code').interact(local=dict(globals(), **locals()))
+
+
+        if self.force_quit:
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            exit_addon(self)
+            self.snap.remove(self.curr_ed_type, self.sel_backup)
+            return {'CANCELLED'}
         '''
 
         if event.type in {'ESC', 'RIGHTMOUSE'} and event.value == 'RELEASE':
@@ -1432,7 +1446,7 @@ class ModalArchTool(bpy.types.Operator):
             self.extr_enabled = addon_prefs.extr_enabled
             #self.debug_flag = False
             self.paused = False
-            self.force_quit = False
+            #self.force_quit = False
 
             tmp_suff = addon_prefs.np_suffix_dist
             if tmp_suff != 'None':
