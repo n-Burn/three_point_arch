@@ -65,7 +65,7 @@ bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
     "version": (0, 0, 2),
-    "blender": (2, 77, 0),
+    "blender": (2, 70, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
     "category": "Mesh"
@@ -323,8 +323,9 @@ class DrawSegmCounter:
         blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
 
-'''
+
 # debug?
+'''
 def draw_text(dpi, text, pos, size, colr):
     if pos is not None:
         font_id = 0
@@ -347,7 +348,7 @@ class HelpText:
         self.colr = colr  # color / colour
         self.shad = False  # text shadow enabled?
         self.shad_colr = shdcolr
-        #self.horz_aln = h_a  # horizontal alignment (L/R/C, C only instr)
+        #self.horz_aln = h_a  # horizontal alignment (L/R/C, C only for instr)
         self.wid = 0  # width
         self.hgt = 0  # height
         self.font_id = 0
