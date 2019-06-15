@@ -64,8 +64,8 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 0, 2),
-    "blender": (2, 70, 0),
+    "version": (0, 1, 0),
+    "blender": (2, 80, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
     "category": "Mesh"
@@ -81,6 +81,7 @@ import bpy
 import bmesh
 import bgl
 import blf
+import gpu
 from mathutils import geometry, Euler, Quaternion, Vector
 from bpy_extras import view3d_utils
 from bpy_extras.view3d_utils import location_3d_to_region_2d as loc3d_to_reg2d
@@ -88,6 +89,7 @@ from bpy_extras.view3d_utils import region_2d_to_vector_3d as reg2d_to_vec3d
 from bpy_extras.view3d_utils import region_2d_to_location_3d as reg2d_to_loc3d
 from bpy_extras.view3d_utils import region_2d_to_origin_3d as reg2d_to_org3d
 from bpy.props import IntProperty, BoolProperty
+from gpu_extras.batch import batch_for_shader
 
 #print("Loaded: Three Point Arc Tool\n")  # debug
 
@@ -119,7 +121,7 @@ class Colr:
 class TPArchPrefs(bpy.types.AddonPreferences):
     bl_idname = __name__
 
-    np_scale_dist = bpy.props.FloatProperty(
+    np_scale_dist: bpy.props.FloatProperty(
         name='',
         description='Distance multiplier (for example, for cm use 100)',
         default=100,
@@ -128,7 +130,7 @@ class TPArchPrefs(bpy.types.AddonPreferences):
         precision=2)
 
     '''
-    np_col_scheme = bpy.props.EnumProperty(
+    np_col_scheme: bpy.props.EnumProperty(
         name ='',
         items = (
             ('csc_default_grey', 'Blender_Default_NP_GREY',''),
@@ -140,7 +142,7 @@ class TPArchPrefs(bpy.types.AddonPreferences):
                 "your current Blender theme')
     '''
 
-    np_suffix_dist = bpy.props.EnumProperty(
+    np_suffix_dist: bpy.props.EnumProperty(
         name='',
         items=( ("'", "'", ''), ('"', '"', ''), (' thou', 'thou', ''),
                 (' km', 'km', ''), (' m', 'm', ''), (' cm', 'cm', ''),
@@ -148,13 +150,13 @@ class TPArchPrefs(bpy.types.AddonPreferences):
         default=' cm',
         description='Add a unit extension after the numerical distance ')
 
-    segm_cnt = IntProperty(
+    segm_cnt: IntProperty(
         name="Arch segments",
         description="Number of segments in arch",
         min=2,
         default=16)
 
-    extr_enabled = BoolProperty(name="Enable extrude",
+    extr_enabled: BoolProperty(name="Enable extrude",
         description="Extrude arch after edge creation",
         default=True)
 
@@ -162,59 +164,59 @@ class TPArchPrefs(bpy.types.AddonPreferences):
         layout = self.layout
         # split 50 / 50, then split 50 to 60 / 40
         row1 = layout.row()
-        r1_sl = row1.split(percentage=0.6)  # 60% of 50%
+        r1_sl = row1.split(factor=0.6)  # 60% of 50%
         r1_sl.label(text="Unit scale for distance")
         r1_sl.prop(self, "np_scale_dist")  # 40% of 50%
-        r1_s2 = row1.split(percentage=0.6)  # 60% of 50%
+        r1_s2 = row1.split(factor=0.6)  # 60% of 50%
         r1_s2.label(text="Unit suffix for distance")
         r1_s2.prop(self, "np_suffix_dist")
 
         row2 = layout.row()
-        r2_sl = row2.split(percentage=0.5)
+        r2_sl = row2.split(factor=0.5)
         r2_sl.prop(self, "segm_cnt")  # 50%
         r2_sl.prop(self, "extr_enabled", text="Enable extrude")
-        #r2_sl_s = r2_sl.split(percentage=0.3)
+        #r2_sl_s = r2_sl.split(factor=0.3)
         #r2_sl_s.label(text="Color scheme")
         #r2_sl_s.prop(self, "np_col_scheme")
 
         #row3 = layout.row()
-        #r3_sl = row3.split(percentage=0.5)
+        #r3_sl = row3.split(factor=0.5)
         #r3_sl.prop(self, "extr_enabled", text="Enable extrude")
 
 
 def backup_blender_settings():
     backup = [
         deepcopy(bpy.context.tool_settings.use_snap),
-        deepcopy(bpy.context.tool_settings.snap_element),
+        deepcopy(bpy.context.tool_settings.snap_elements),
         deepcopy(bpy.context.tool_settings.snap_target),
-        deepcopy(bpy.context.space_data.pivot_point),
-        deepcopy(bpy.context.space_data.transform_orientation),
-        deepcopy(bpy.context.space_data.show_manipulator),
-        deepcopy(bpy.context.scene.cursor_location),
+        deepcopy(bpy.context.tool_settings.transform_pivot_point),
+        deepcopy(bpy.context.scene.transform_orientation_slots[0].type),
+        deepcopy(bpy.context.space_data.show_gizmo),
+        deepcopy(bpy.context.scene.cursor.location),
         deepcopy(bpy.context.tool_settings.mesh_select_mode[:])]
     return backup
 
 
 def init_blender_settings():
     bpy.context.tool_settings.use_snap = False
-    bpy.context.tool_settings.snap_element = 'VERTEX'
+    bpy.context.tool_settings.snap_elements = {'VERTEX'}
     bpy.context.tool_settings.snap_target = 'CLOSEST'
     #bpy.context.tool_settings.snap_target = 'ACTIVE'
-    bpy.context.space_data.pivot_point = 'ACTIVE_ELEMENT'
-    bpy.context.space_data.transform_orientation = 'GLOBAL'
-    bpy.context.space_data.show_manipulator = False
+    bpy.context.tool_settings.transform_pivot_point = 'ACTIVE_ELEMENT'
+    bpy.context.scene.transform_orientation_slots[0].type = 'GLOBAL'
+    bpy.context.space_data.show_gizmo = False
     bpy.context.tool_settings.mesh_select_mode = True, False, False
     return
 
 
 def restore_blender_settings(backup):
     bpy.context.tool_settings.use_snap = deepcopy(backup[0])
-    bpy.context.tool_settings.snap_element = deepcopy(backup[1])
+    bpy.context.tool_settings.snap_elements = deepcopy(backup[1])
     bpy.context.tool_settings.snap_target = deepcopy(backup[2])
-    bpy.context.space_data.pivot_point = deepcopy(backup[3])
-    bpy.context.space_data.transform_orientation = deepcopy(backup[4])
-    bpy.context.space_data.show_manipulator = deepcopy(backup[5])
-    bpy.context.scene.cursor_location = deepcopy(backup[6])
+    bpy.context.tool_settings.transform_pivot_point = deepcopy(backup[3])
+    bpy.context.scene.transform_orientation_slots[0].type = deepcopy(backup[4])
+    bpy.context.space_data.show_gizmo = deepcopy(backup[5])
+    bpy.context.scene.cursor.location = deepcopy(backup[6])
     bpy.context.tool_settings.mesh_select_mode = deepcopy(backup[7])
     return
 
@@ -223,7 +225,7 @@ class DrawMeanDistance:
     def __init__(self, sz, settings):
         self.reg = bpy.context.region
         self.rv3d = bpy.context.region_data
-        self.dpi = bpy.context.user_preferences.system.dpi
+        self.dpi = bpy.context.preferences.system.dpi
         self.size = sz
         self.txtcolr = settings["col_num_main"]
         self.shdcolr = settings["col_num_shadow"]
@@ -271,7 +273,8 @@ class DrawMeanDistance:
             blf.shadow(self.font_id, shblr, *self.shdcolr)
             blf.shadow_offset(self.font_id, *self.shdoffs)
 
-            bgl.glColor4f(*self.txtcolr)
+            #bgl.glColor4f(*self.txtcolr)
+            blf.color(self.font_id, *self.txtcolr)
             blf.size(self.font_id, self.size, self.dpi)
             blf.position(self.font_id, dist_loc[0], dist_loc[1], 0)
             blf.draw(self.font_id, dist)
@@ -286,7 +289,7 @@ class DrawMeanDistance:
 
 class DrawSegmCounter:
     def __init__(self, settings):
-        self.dpi = bpy.context.user_preferences.system.dpi
+        self.dpi = bpy.context.preferences.system.dpi
         self.desc_str = "Arch segments"
         self.desc_size = 16
         self.seg_cnt_size = 32
@@ -313,12 +316,14 @@ class DrawSegmCounter:
         desc_co = co + self.desc_co_offs
         seg_cnt_co = desc_co + self.seg_cnt_co_offs
 
-        bgl.glColor4f(*self.desc_colr)
+        #bgl.glColor4f(*self.desc_colr)
+        blf.color(self.font_id, *self.desc_colr)
         blf.size(self.font_id, self.desc_size, self.dpi)
         blf.position(self.font_id, desc_co[0], desc_co[1], 0)
         blf.draw(self.font_id, self.desc_str)
 
-        bgl.glColor4f(*self.seg_cnt_colr)
+        #bgl.glColor4f(*self.seg_cnt_colr)
+        blf.color(self.font_id, *self.seg_cnt_colr)
         blf.size(self.font_id, self.seg_cnt_size, self.dpi)
         blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
@@ -329,7 +334,8 @@ class DrawSegmCounter:
 def draw_text(dpi, text, pos, size, colr):
     if pos is not None:
         font_id = 0
-        bgl.glColor4f(*colr)
+        #bgl.glColor4f(*colr)
+        blf.color(font_id, colr)
         blf.size(font_id, size, dpi)
         blf.position(font_id, pos[0], pos[1], 0)
         blf.draw(font_id, text)
@@ -341,7 +347,7 @@ class HelpText:
         self.wid, self.hgt = blf.dimensions(self.font_id, self.origtxt)
 
     def __init__(self, text, size, h_a, colr, shdcolr):
-        self.dpi = bpy.context.user_preferences.system.dpi
+        self.dpi = bpy.context.preferences.system.dpi
         self.origtxt = text  # original text string
         self.disptxt = [text]  # displayed text
         self.size = size
@@ -375,7 +381,8 @@ class HelpText:
                 self.draw()
 
     def draw(self):
-        bgl.glColor4f(*self.colr)
+        #bgl.glColor4f(*self.colr)
+        blf.color(self.font_id, *self.colr)
         blf.size(self.font_id, self.size, self.dpi)
         p1 = self.pos
         blf.position(self.font_id, p1[0], p1[1], 0)
@@ -508,6 +515,19 @@ class HelpBar:
             self.bndry[1] = self.get_bar_co(left, right, btm2, top2)
 
     def draw(self):
+        for b in range(self.barcnt):
+            indc = (0, 1, 2), (2, 3, 0)
+            #print("self.bdry:",self.bdry[b])
+            shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+            batch = batch_for_shader(shader, 'TRIS', {"pos": self.bndry[b]}, indices=indc)
+            shader.bind()
+            shader.uniform_float("color", self.colr)
+            batch.draw(shader)
+        for i in self.help_txts:
+            i.draw_wrapper()
+    #
+    '''
+    def draw(self):
         bgl.glColor4f(*self.colr)
         for b in range(self.barcnt):
             bgl.glBegin(bgl.GL_TRIANGLE_FAN)
@@ -517,6 +537,7 @@ class HelpBar:
 
         for i in self.help_txts:
             i.draw_wrapper()
+    '''
 
 
 class HelpDisplay:
@@ -571,9 +592,10 @@ class HelpDisplay:
     def new_vals(self):
         rtoolsw = 0
         ruiw = 0
-        system = bpy.context.user_preferences.system
+        system = bpy.context.preferences.system
         if system.use_region_overlap:
-            if system.window_draw_method in ('TRIPLE_BUFFER', 'AUTOMATIC'):
+            #if system.window_draw_method in ('TRIPLE_BUFFER', 'AUTOMATIC'):
+            if True:  # todo
                 area = bpy.context.area
                 for r in area.regions:
                     if r.type == 'TOOLS':
@@ -664,17 +686,29 @@ def get_rotated_pt(piv_co, mov_co, ang_rad, piv_norm):
 
 def draw_pt_2D(pt_co, pt_color):
     if pt_co is not None:
+        #
+        '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(10)
         bgl.glColor4f(*pt_color)
         bgl.glBegin(bgl.GL_POINTS)
         bgl.glVertex2f(*pt_co)
         bgl.glEnd()
+        '''
+        bgl.glPointSize(10)
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'POINTS', {"pos": pt_co})
+        shader.bind()
+        shader.uniform_float("color", pt_color)
+        batch.draw(shader)
+        bgl.glPointSize(1)
     return
 
 
 def draw_line_2D(pt_co_1, pt_co_2, pt_color):
     if None not in (pt_co_1, pt_co_2):
+        #
+        '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(7)
         bgl.glColor4f(*pt_color)
@@ -682,12 +716,20 @@ def draw_line_2D(pt_co_1, pt_co_2, pt_color):
         bgl.glVertex2f(*pt_co_1)
         bgl.glVertex2f(*pt_co_2)
         bgl.glEnd()
+        '''
+        coords = [pt_co_1, pt_co_2]
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": coords})
+        shader.bind()
+        shader.uniform_float("color", pt_color)
+        batch.draw(shader)
     return
 
 
 def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
     orig2d = loc3d_to_reg2d(reg, rv3d, orig)
     # returns None when 3d point is not inside active 3D View
+    '''
     if orig2d is not None:
         draw_pt_2D(orig2d, Colr.white)
     ang_incr = abs(ang_meas / steps)
@@ -704,6 +746,34 @@ def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
     if new_pt2d is not None:
         bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
     bgl.glEnd()
+    return
+    '''
+    if orig2d is not None:
+        #print("draw_pt_2D(orig2d, Colr.white)", orig2d)
+        draw_pt_2D([orig2d], Colr.white)
+        #coords.append(orig2d)
+    ang_incr = abs(ang_meas / steps)
+    #bgl.glColor4f(*color)
+    #bgl.glBegin(bgl.GL_LINE_STRIP)
+    curr_ang = 0.0
+    coords = []
+    while curr_ang <= ang_meas:
+        new_pt = get_rotated_pt(orig, pts[0], curr_ang, piv_norm)
+        new_pt2d = loc3d_to_reg2d(reg, rv3d, new_pt)
+        if new_pt2d is not None:
+            coords.append(new_pt2d)
+        curr_ang = curr_ang + ang_incr
+    new_pt2d = loc3d_to_reg2d(reg, rv3d, pts[1])
+    if new_pt2d is not None:
+        coords.append(new_pt2d)
+    len_coords = len(coords)
+    if len_coords > 1:
+        indc = [(i, i+1) for i in range(len_coords) if i+1 != len_coords]
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": coords}, indices=indc)
+        shader.bind()
+        shader.uniform_float("color", color)
+        batch.draw(shader)
     return
 
 
@@ -758,7 +828,7 @@ class SnapPoint():
     def grab(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
+            self.ob[-1].select_set(True)
             #bpy.context.scene.objects[0].location = ms_loc_3d
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -774,18 +844,18 @@ class SnapPoint():
         ms_loc_3d = self.get_mouse_3d(ms_loc_2d)
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
-            self.ob[0].location = ms_loc_3d
-        '''
+            self.ob[-1].select_set(True)
+            self.ob[-1].location = ms_loc_3d
+            '''        '''
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
             bm.verts[-1].select = True
             inver_mw = bpy.context.edit_object.matrix_world.inverted()
-            local_co = inver_mw * ms_loc_3d
+            local_co = inver_mw @ ms_loc_3d
             bm.verts[-1].co = local_co
             editmode_refresh(ed_type)
-        '''
+
         #snap_co = self.get_co(ms_loc_2d)
         #print("dist moved:", (snap_co - ms_loc_3d).length  )  # debug
         bpy.ops.transform.translate('INVOKE_DEFAULT')
@@ -795,16 +865,16 @@ class SnapPoint():
     def remove(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
+            self.ob[-1].select_set(True)
             bpy.ops.object.delete()
-        '''
+            '''        '''
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
             bm.verts[-1].select = True
             editmode_refresh(ed_type)
             bpy.ops.mesh.delete(type='VERT')
-        '''
+
         self.point = None
         #sel_backup.restore_selected(ed_type)
 
@@ -814,7 +884,7 @@ class SnapPoint():
 
     def move(self, ed_type, new_co):
         if ed_type == 'OBJECT':
-            self.ob[0].location = new_co.copy()
+            self.ob[-1].location = new_co.copy()
 
 
 def exit_addon(self):
@@ -933,13 +1003,13 @@ def click_handler(self, context):
             add_pt(self, snap)
             self.stage += 1
 
-            bpy.context.scene.objects[0].location = self.circ_cen.copy()
+            bpy.context.scene.objects[-1].location = self.circ_cen.copy()
             bpy.ops.object.editmode_toggle()
             self.curr_ed_type = context.mode
-            inv_mw = bpy.context.scene.objects[0].matrix_world.inverted()
-            piv_cent = inv_mw * self.circ_cen
+            inv_mw = bpy.context.scene.objects[-1].matrix_world.inverted()
+            piv_cent = inv_mw @ self.circ_cen
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
-            bm.verts.new(inv_mw * self.new_pts[0])
+            bm.verts.new(inv_mw @ self.new_pts[0])
             # Spin and deal with geometry on side 'a'
             edges_start_a = bm.edges[:]
             geom_start_a = bm.verts[:] + edges_start_a
@@ -956,14 +1026,16 @@ def click_handler(self, context):
             if not self.extr_enabled:
                 self.stage = EXIT
             else:
-                bpy.context.scene.cursor_location = self.circ_cen
+                bpy.context.scene.cursor.location = self.circ_cen
                 bpy.context.tool_settings.snap_target = 'ACTIVE'
-                bpy.context.space_data.pivot_point = 'CURSOR'
-                bpy.context.space_data.transform_orientation = 'GLOBAL'
+                bpy.context.tool_settings.transform_pivot_point = 'CURSOR'
+                bpy.context.scene.transform_orientation_slots[0].type = 'GLOBAL'
                 bpy.ops.mesh.select_all(action='SELECT')
                 bpy.ops.mesh.extrude_region_move()
+                #bpy.ops.transform.resize('INVOKE_DEFAULT',
+                #        constraint_orientation='GLOBAL')
                 bpy.ops.transform.resize('INVOKE_DEFAULT',
-                        constraint_orientation='GLOBAL')
+                        orient_type='GLOBAL')
 
                 self.stage = ARCH_EXTRUDE_1
         else:
@@ -971,9 +1043,9 @@ def click_handler(self, context):
 
     elif self.stage == ARCH_EXTRUDE_1:
         bpy.context.tool_settings.mesh_select_mode = False, False, True
-        #bpy.context.space_data.transform_orientation = 'LOCAL'
+        #bpy.context.scene.transform_orientation_slots[0].type = 'LOCAL'
         bpy.context.tool_settings.snap_target = 'CLOSEST'
-        bpy.context.space_data.pivot_point = 'MEDIAN_POINT'
+        bpy.context.tool_settings.transform_pivot_point = 'MEDIAN_POINT'
         update_gui(self)
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.view3d.edit_mesh_extrude_move_normal('INVOKE_DEFAULT')
@@ -982,6 +1054,37 @@ def click_handler(self, context):
     elif self.stage == ARCH_EXTRUDE_2:
         self.stage = EXIT
 
+'''
+# To-Do : make something nicer than this for handling GUI changes...
+def update_gui2(self):
+    self.gui_text_sett = {
+        "title_txt_sz": 24,
+        #bar_txt_sz": 18,  # tablet
+        "bar_txt_sz": 12,
+    }
+    self.gui_text_sett.update(
+        title_txt = "place 3 points to create arch",
+        title_aln = "C",
+
+        bar_t_txt_1 = "LMB - place point, CTRL - snap point, ",
+        bar_t_txt_2 = "XYZ - add axis lock, C - clear axis lock",
+        bar_t_aln_1 = "L",
+    )
+    self.helpdisp.clear_str()
+    if not self.pause:
+        if self.stage < ARCH_EXTRUDE_1:
+            self.helpdisp.add_str(
+                "INS",
+                "place 3 points to create arch",
+                title_txt_sz,
+                'C')
+            self.helpdisp.add_str(
+                "TOP",
+                "LMB - place point, CTRL - snap point, "
+                "XYZ - add axis lock, C - clear axis lock",
+                bar_txt_sz,
+                'L')
+'''
 
 # To-Do : make something nicer than this for handling GUI changes...
 def update_gui(self):
@@ -1103,7 +1206,6 @@ def update_gui(self):
 
 def retreive_settings(arg):
     settings_dict = {}
-    #settings_dict['dpi'] = bpy.context.user_preferences.system.dpi
     if arg == "csc_default_grey":
         settings_dict.update(
             col_font_np = (0.95, 0.95, 0.95, 1.0),
@@ -1260,8 +1362,8 @@ def draw_callback_px(self, context):
         v_cent1_idx = vert_cnt // 2
         v_cent2_idx = v_cent1_idx + vert_cnt
         m_w = bpy.context.edit_object.matrix_world
-        v1 = m_w * vts[v_cent1_idx].co
-        v2 = m_w * vts[v_cent2_idx].co
+        v1 = m_w @ vts[v_cent1_idx].co
+        v2 = m_w @ vts[v_cent2_idx].co
         line_pts = v1, v2
 
         pts_cust = self.pts[0], self.pts[1], v1
@@ -1277,17 +1379,20 @@ def draw_callback_px(self, context):
         v_cent1_idx = vert_cnt // 2
         v_cent2_idx = v_cent1_idx + (vert_cnt * 2)
         m_w = bpy.context.edit_object.matrix_world
-        v1 = m_w * vts[v_cent1_idx].co
-        v2 = m_w * vts[v_cent2_idx].co
+        v1 = m_w @ vts[v_cent1_idx].co
+        v2 = m_w @ vts[v_cent2_idx].co
         line_pts = v1, v2
         pts2d = [loc3d_to_reg2d(reg, rv3d, v1)]
         guide2d = loc3d_to_reg2d(reg, rv3d, v2)
 
     if line_pts != []:
         self.mean_dist.draw(line_pts, self.meas_mult, self.meas_suff)
-    for i in pts2d:
-        draw_pt_2D(i, Colr.white)
-    draw_pt_2D(guide2d, Colr.green)
+    if len(pts2d) > 0:
+        draw_pt_2D(pts2d, Colr.white)
+    #for i in pts2d:
+    #    draw_pt_2D(i, Colr.white)
+    #print("draw_pt_2D(guide2d, Colr.green)", guide2d)
+    draw_pt_2D([guide2d], Colr.green)
 
     # display number of segments
     if self.paused and self.stage < ARCH_EXTRUDE_1:
@@ -1414,7 +1519,7 @@ class ModalArchTool(bpy.types.Operator):
                 bpy.ops.object.editmode_toggle()
             bpy.ops.object.select_all(action='DESELECT')
 
-            addon_prefs = context.user_preferences.addons[__name__].preferences
+            addon_prefs = context.preferences.addons[__name__].preferences
             #sett_dict = retreive_settings(addon_prefs.np_col_scheme)
             sett_dict = retreive_settings("def_blender_gray")
 
@@ -1466,14 +1571,13 @@ class ModalArchTool(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class TPArchPanel(bpy.types.Panel):
+class TPARCH_PT_panel(bpy.types.Panel):
     # Creates a panel in the 3d view Toolshelf window
     bl_label = 'Arch Panel'
-    bl_idname = 'TPArch_base_panel'
     bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
+    bl_region_type = 'UI'
     bl_context = 'objectmode'
-    bl_category = 'Tools'
+    bl_category = 'Create'
 
     def draw(self, context):
         #layout = self.layout
@@ -1484,10 +1588,10 @@ class TPArchPanel(bpy.types.Panel):
 def register():
     bpy.utils.register_class(TPArchPrefs)
     bpy.utils.register_class(ModalArchTool)
-    bpy.utils.register_class(TPArchPanel)
+    bpy.utils.register_class(TPARCH_PT_panel)
 
 def unregister():
-    bpy.utils.unregister_class(TPArchPanel)
+    bpy.utils.unregister_class(TPARCH_PT_panel)
     bpy.utils.unregister_class(ModalArchTool)
     bpy.utils.unregister_class(TPArchPrefs)
 
