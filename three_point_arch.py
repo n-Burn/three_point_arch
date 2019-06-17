@@ -82,7 +82,7 @@ import bmesh
 import bgl
 import blf
 import gpu
-from mathutils import geometry, Euler, Quaternion, Vector
+from mathutils import geometry, Quaternion, Vector
 from bpy_extras import view3d_utils
 from bpy_extras.view3d_utils import location_3d_to_region_2d as loc3d_to_reg2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d as reg2d_to_vec3d
@@ -595,13 +595,12 @@ class HelpDisplay:
         system = bpy.context.preferences.system
         if system.use_region_overlap:
             #if system.window_draw_method in ('TRIPLE_BUFFER', 'AUTOMATIC'):
-            if True:  # todo
-                area = bpy.context.area
-                for r in area.regions:
-                    if r.type == 'TOOLS':
-                        rtoolsw = r.width
-                    elif r.type == 'UI':
-                        ruiw = r.width
+            area = bpy.context.area
+            for r in area.regions:
+                if r.type == 'TOOLS':
+                    rtoolsw = r.width
+                elif r.type == 'UI':
+                    ruiw = r.width
 
         if self.rtoolsw != rtoolsw or self.ruiw != ruiw or \
                 self.rgwid != self.reg.width or self.rghgt != self.reg.height:
@@ -857,7 +856,7 @@ class SnapPoint():
             editmode_refresh(ed_type)
 
         #snap_co = self.get_co(ms_loc_2d)
-        #print("dist moved:", (snap_co - ms_loc_3d).length  )  # debug
+        #print("dist moved:", (snap_co - ms_loc_3d).length)  # debug
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
     # Makes sure only the "guide point" object or vert
@@ -928,8 +927,8 @@ def update_arch(self, snap):
 
     # create pos and neg endpoints for determining where to create arch
     rot_pos, rot_neg = self.mov_aligned.copy(), self.mov_aligned.copy()
-    rot_pos.rotate( Quaternion(self.piv_norm, self.rad90) )
-    rot_neg.rotate( Quaternion(self.piv_norm,-self.rad90) )
+    rot_pos.rotate(Quaternion(self.piv_norm, self.rad90))
+    rot_neg.rotate(Quaternion(self.piv_norm,-self.rad90))
     rot_pos = rot_pos + self.cent
     rot_neg = rot_neg + self.cent
 
