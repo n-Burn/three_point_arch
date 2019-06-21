@@ -144,9 +144,9 @@ class TPArchPrefs(bpy.types.AddonPreferences):
 
     np_suffix_dist: bpy.props.EnumProperty(
         name='',
-        items=( ("'", "'", ''), ('"', '"', ''), (' thou', 'thou', ''),
-                (' km', 'km', ''), (' m', 'm', ''), (' cm', 'cm', ''),
-                (' mm', 'mm', ''), (' nm', 'nm', ''), ('None', 'None', '') ),
+        items=(("'", "'", ''), ('"', '"', ''), (' thou', 'thou', ''),
+               (' km', 'km', ''), (' m', 'm', ''), (' cm', 'cm', ''),
+               (' mm', 'mm', ''), (' nm', 'nm', ''), ('None', 'None', '')),
         default=' cm',
         description='Add a unit extension after the numerical distance ')
 
@@ -245,9 +245,8 @@ class DrawMeanDistance:
 
         draw_line_2D(p1_2d, p2_2d, Colr.white)
 
-        if p1_2d is None:
-            p1_2d = 0.0, 0.0
-            p2_2d = 0.0, 0.0
+        if p1_2d is None or p2_2d is None:
+            p1_2d = p2_2d = 0.0, 0.0
 
         def get_pts_mean(locs2d, max_val):
             res = 0
@@ -261,16 +260,16 @@ class DrawMeanDistance:
         mean_x = get_pts_mean((p1_2d[X], p2_2d[X]), self.reg.width)
         mean_y = get_pts_mean((p1_2d[Y], p2_2d[Y]), self.reg.height)
         offset = 5, 5
-        shblr = 3  # shadow blur
+        shdblr = 3  # shadow blur
         dist_loc = mean_x + offset[X], mean_y + offset[Y]
         dist_3d = meas_mult * (pts_3d[1] - pts_3d[0]).length
         dist_3d_rnd = abs(round(dist_3d, 2))
         dist = str(dist_3d_rnd) + meas_suff
         #print("self.txtcolr", self.txtcolr)  # debug
 
-        if dist_3d_rnd not in (0, 'a'):
+        if dist_3d_rnd != 0:
             blf.enable(self.font_id, blf.SHADOW)
-            blf.shadow(self.font_id, shblr, *self.shdcolr)
+            blf.shadow(self.font_id, shdblr, *self.shdcolr)
             blf.shadow_offset(self.font_id, *self.shdoffs)
 
             #bgl.glColor4f(*self.txtcolr)
@@ -685,7 +684,6 @@ def get_rotated_pt(piv_co, mov_co, ang_rad, piv_norm):
 
 def draw_pt_2D(pt_co, pt_color):
     if pt_co is not None:
-        #
         '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(10)
@@ -706,7 +704,6 @@ def draw_pt_2D(pt_co, pt_color):
 
 def draw_line_2D(pt_co_1, pt_co_2, pt_color):
     if None not in (pt_co_1, pt_co_2):
-        #
         '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(7)
@@ -890,6 +887,9 @@ def exit_addon(self):
     if self.curr_ed_type == 'EDIT_MESH':
         bpy.ops.object.editmode_toggle()
         self.curr_ed_type = bpy.context.mode
+    if self.force_quit:
+        self.force_quit = False
+        self.snap.remove(self.curr_ed_type, self.sel_backup)
     #print("self.curr_ed_type", self.curr_ed_type)  # debug
     #print("self.stage", self.stage)  # debug
     #print("self.force_quit", self.force_quit)  # debug
@@ -1480,17 +1480,15 @@ class ModalArchTool(bpy.types.Operator):
         if event.type == 'D' and event.value == 'RELEASE':
             __import__('code').interact(local=dict(globals(), **locals()))
 
-
         if self.force_quit:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             exit_addon(self)
-            self.snap.remove(self.curr_ed_type, self.sel_backup)
             return {'CANCELLED'}
         '''
-
         if event.type in {'ESC', 'RIGHTMOUSE'} and event.value == 'RELEASE':
             #print("pressed ESC or RIGHTMOUSE")  # debug
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            self.force_quit = True
             exit_addon(self)
             return {'CANCELLED'}
 
@@ -1551,7 +1549,7 @@ class ModalArchTool(bpy.types.Operator):
             self.extr_enabled = addon_prefs.extr_enabled
             #self.debug_flag = False
             self.paused = False
-            #self.force_quit = False
+            self.force_quit = False
 
             tmp_suff = addon_prefs.np_suffix_dist
             if tmp_suff != 'None':
