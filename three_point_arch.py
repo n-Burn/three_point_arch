@@ -64,7 +64,7 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 0, 2),
+    "version": (0, 0, 3),
     "blender": (2, 70, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
@@ -81,7 +81,7 @@ import bpy
 import bmesh
 import bgl
 import blf
-from mathutils import geometry, Euler, Quaternion, Vector
+from mathutils import geometry, Quaternion, Vector
 from bpy_extras import view3d_utils
 from bpy_extras.view3d_utils import location_3d_to_region_2d as loc3d_to_reg2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d as reg2d_to_vec3d
@@ -142,9 +142,9 @@ class TPArchPrefs(bpy.types.AddonPreferences):
 
     np_suffix_dist = bpy.props.EnumProperty(
         name='',
-        items=( ("'", "'", ''), ('"', '"', ''), (' thou', 'thou', ''),
-                (' km', 'km', ''), (' m', 'm', ''), (' cm', 'cm', ''),
-                (' mm', 'mm', ''), (' nm', 'nm', ''), ('None', 'None', '') ),
+        items=(("'", "'", ''), ('"', '"', ''), (' thou', 'thou', ''),
+               (' km', 'km', ''), (' m', 'm', ''), (' cm', 'cm', ''),
+               (' mm', 'mm', ''), (' nm', 'nm', ''), ('None', 'None', '')),
         default=' cm',
         description='Add a unit extension after the numerical distance ')
 
@@ -243,9 +243,8 @@ class DrawMeanDistance:
 
         draw_line_2D(p1_2d, p2_2d, Colr.white)
 
-        if p1_2d is None:
-            p1_2d = 0.0, 0.0
-            p2_2d = 0.0, 0.0
+        if p1_2d is None or p2_2d is None:
+            p1_2d = p2_2d = 0.0, 0.0
 
         def get_pts_mean(locs2d, max_val):
             res = 0
@@ -259,16 +258,16 @@ class DrawMeanDistance:
         mean_x = get_pts_mean((p1_2d[X], p2_2d[X]), self.reg.width)
         mean_y = get_pts_mean((p1_2d[Y], p2_2d[Y]), self.reg.height)
         offset = 5, 5
-        shblr = 3  # shadow blur
+        shdblr = 3  # shadow blur
         dist_loc = mean_x + offset[X], mean_y + offset[Y]
         dist_3d = meas_mult * (pts_3d[1] - pts_3d[0]).length
         dist_3d_rnd = abs(round(dist_3d, 2))
         dist = str(dist_3d_rnd) + meas_suff
         #print("self.txtcolr", self.txtcolr)  # debug
 
-        if dist_3d_rnd not in (0, 'a'):
+        if dist_3d_rnd != 0:
             blf.enable(self.font_id, blf.SHADOW)
-            blf.shadow(self.font_id, shblr, *self.shdcolr)
+            blf.shadow(self.font_id, shdblr, *self.shdcolr)
             blf.shadow_offset(self.font_id, *self.shdoffs)
 
             bgl.glColor4f(*self.txtcolr)
@@ -787,7 +786,7 @@ class SnapPoint():
             editmode_refresh(ed_type)
         '''
         #snap_co = self.get_co(ms_loc_2d)
-        #print("dist moved:", (snap_co - ms_loc_3d).length  )  # debug
+        #print("dist moved:", (snap_co - ms_loc_3d).length)  # debug
         bpy.ops.transform.translate('INVOKE_DEFAULT')
 
     # Makes sure only the "guide point" object or vert
@@ -821,6 +820,9 @@ def exit_addon(self):
     if self.curr_ed_type == 'EDIT_MESH':
         bpy.ops.object.editmode_toggle()
         self.curr_ed_type = bpy.context.mode
+    if self.force_quit:
+        self.force_quit = False
+        self.snap.remove(self.curr_ed_type, self.sel_backup)
     #print("self.curr_ed_type", self.curr_ed_type)  # debug
     #print("self.stage", self.stage)  # debug
     #print("self.force_quit", self.force_quit)  # debug
@@ -858,8 +860,8 @@ def update_arch(self, snap):
 
     # create pos and neg endpoints for determining where to create arch
     rot_pos, rot_neg = self.mov_aligned.copy(), self.mov_aligned.copy()
-    rot_pos.rotate( Quaternion(self.piv_norm, self.rad90) )
-    rot_neg.rotate( Quaternion(self.piv_norm,-self.rad90) )
+    rot_pos.rotate(Quaternion(self.piv_norm, self.rad90))
+    rot_neg.rotate(Quaternion(self.piv_norm,-self.rad90))
     rot_pos = rot_pos + self.cent
     rot_neg = rot_neg + self.cent
 
@@ -1103,7 +1105,6 @@ def update_gui(self):
 
 def retreive_settings(arg):
     settings_dict = {}
-    #settings_dict['dpi'] = bpy.context.user_preferences.system.dpi
     if arg == "csc_default_grey":
         settings_dict.update(
             col_font_np = (0.95, 0.95, 0.95, 1.0),
@@ -1376,17 +1377,15 @@ class ModalArchTool(bpy.types.Operator):
         if event.type == 'D' and event.value == 'RELEASE':
             __import__('code').interact(local=dict(globals(), **locals()))
 
-
         if self.force_quit:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             exit_addon(self)
-            self.snap.remove(self.curr_ed_type, self.sel_backup)
             return {'CANCELLED'}
         '''
-
         if event.type in {'ESC', 'RIGHTMOUSE'} and event.value == 'RELEASE':
             #print("pressed ESC or RIGHTMOUSE")  # debug
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            self.force_quit = True
             exit_addon(self)
             return {'CANCELLED'}
 
@@ -1447,7 +1446,7 @@ class ModalArchTool(bpy.types.Operator):
             self.extr_enabled = addon_prefs.extr_enabled
             #self.debug_flag = False
             self.paused = False
-            #self.force_quit = False
+            self.force_quit = False
 
             tmp_suff = addon_prefs.np_suffix_dist
             if tmp_suff != 'None':
