@@ -64,7 +64,7 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 1, 0),
+    "version": (0, 1, 1),
     "blender": (2, 80, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
@@ -105,6 +105,21 @@ from gpu_extras.batch import batch_for_shader
     ARCH_EXTRUDE_2,
     EXIT
 ) = range(9)
+
+
+def safe_loc3d_to_reg2d(reg, rv3d, pts):
+    empty_list = True
+    res = []
+    for p in pts:
+        p2d = loc3d_to_reg2d(reg, rv3d, p)
+        if p2d is not None:
+            if empty_list:
+                empty_list = False
+            res.append(p2d)
+    if not empty_list:
+        return res
+    else:
+        return None
 
 
 class Colr:
@@ -310,8 +325,8 @@ class DrawSegmCounter:
         self.seg_cnt_co_offs = Vector((c_b_offs[X], desc_dim[Y] + c_b_offs[Y]))
 
     def draw(self, cnt, co):
-        if co is None:
-            return
+        #if co is None:
+        #    return
         desc_co = co + self.desc_co_offs
         seg_cnt_co = desc_co + self.seg_cnt_co_offs
 
@@ -514,6 +529,17 @@ class HelpBar:
             self.bndry[1] = self.get_bar_co(left, right, btm2, top2)
 
     def draw(self):
+        '''
+        bgl.glColor4f(*self.colr)
+        for b in range(self.barcnt):
+            bgl.glBegin(bgl.GL_TRIANGLE_FAN)
+            for co in self.bndry[b]:
+                bgl.glVertex2f(*co)
+            bgl.glEnd()
+
+        for i in self.help_txts:
+            i.draw_wrapper()
+        '''
         for b in range(self.barcnt):
             indc = (0, 1, 2), (2, 3, 0)
             #print("self.bdry:",self.bdry[b])
@@ -524,19 +550,6 @@ class HelpBar:
             batch.draw(shader)
         for i in self.help_txts:
             i.draw_wrapper()
-    #
-    '''
-    def draw(self):
-        bgl.glColor4f(*self.colr)
-        for b in range(self.barcnt):
-            bgl.glBegin(bgl.GL_TRIANGLE_FAN)
-            for co in self.bndry[b]:
-                bgl.glVertex2f(*co)
-            bgl.glEnd()
-
-        for i in self.help_txts:
-            i.draw_wrapper()
-    '''
 
 
 class HelpDisplay:
@@ -723,9 +736,9 @@ def draw_line_2D(pt_co_1, pt_co_2, pt_color):
 
 
 def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
+    '''
     orig2d = loc3d_to_reg2d(reg, rv3d, orig)
     # returns None when 3d point is not inside active 3D View
-    '''
     if orig2d is not None:
         draw_pt_2D(orig2d, Colr.white)
     ang_incr = abs(ang_meas / steps)
@@ -743,11 +756,14 @@ def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
         bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
     bgl.glEnd()
     return
-    '''
+
     if orig2d is not None:
         #print("draw_pt_2D(orig2d, Colr.white)", orig2d)
         draw_pt_2D([orig2d], Colr.white)
         #coords.append(orig2d)
+    '''
+    orig2d = safe_loc3d_to_reg2d(reg, rv3d, [orig])
+    draw_pt_2D(orig2d, Colr.white)
     ang_incr = abs(ang_meas / steps)
     #bgl.glColor4f(*color)
     #bgl.glBegin(bgl.GL_LINE_STRIP)
@@ -1326,18 +1342,23 @@ def draw_callback_px(self, context):
     line_pts = []
 
     if self.stage == PLACE_1ST:
-        guide2d = loc3d_to_reg2d(reg, rv3d, snap)
+        #guide2d = loc3d_to_reg2d(reg, rv3d, snap)
+        guide2d = safe_loc3d_to_reg2d(reg, rv3d, [snap])
 
     elif self.stage == PLACE_2ND:
-        guide2d = loc3d_to_reg2d(reg, rv3d, snap)
-        pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in self.pts]
+        #guide2d = loc3d_to_reg2d(reg, rv3d, snap)
+        guide2d = safe_loc3d_to_reg2d(reg, rv3d, [snap])
+        #pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in self.pts]
+        pts2d = safe_loc3d_to_reg2d(reg, rv3d, self.pts)
         line_pts = self.pts[0], snap
-        if not len(pts2d) > 0:
-            print("len(pts2d) == 0")
+        #if not len(pts2d) > 0:
+        #    print("len(pts2d) == 0")
 
     elif self.stage == PLACE_3RD:
-        guide2d = loc3d_to_reg2d(reg, rv3d, snap)
-        pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in self.pts]
+        #guide2d = loc3d_to_reg2d(reg, rv3d, snap)
+        guide2d = safe_loc3d_to_reg2d(reg, rv3d, [snap])
+        #pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in self.pts]
+        pts2d = safe_loc3d_to_reg2d(reg, rv3d, self.pts)
 
         # attempt to draw arch
         update_arch(self, snap)
@@ -1366,8 +1387,10 @@ def draw_callback_px(self, context):
         line_pts = v1, v2
 
         pts_cust = self.pts[0], self.pts[1], v1
-        pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in pts_cust]
-        guide2d = loc3d_to_reg2d(reg, rv3d, v2)
+        #pts2d = [loc3d_to_reg2d(reg, rv3d, i) for i in pts_cust]
+        pts2d = safe_loc3d_to_reg2d(reg, rv3d, pts_cust)
+        #guide2d = loc3d_to_reg2d(reg, rv3d, v2)
+        guide2d = safe_loc3d_to_reg2d(reg, rv3d, [v2])
 
     elif self.stage == ARCH_EXTRUDE_2:
         bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
@@ -1381,22 +1404,25 @@ def draw_callback_px(self, context):
         v1 = m_w @ vts[v_cent1_idx].co
         v2 = m_w @ vts[v_cent2_idx].co
         line_pts = v1, v2
-        pts2d = [loc3d_to_reg2d(reg, rv3d, v1)]
-        guide2d = loc3d_to_reg2d(reg, rv3d, v2)
+        #pts2d = [loc3d_to_reg2d(reg, rv3d, v1)]
+        pts2d = safe_loc3d_to_reg2d(reg, rv3d, [v1])
+        #guide2d = loc3d_to_reg2d(reg, rv3d, v2)
+        guide2d = safe_loc3d_to_reg2d(reg, rv3d, [v2])
 
     if line_pts != []:
         self.mean_dist.draw(line_pts, self.meas_mult, self.meas_suff)
-    if len(pts2d) > 0:
-        draw_pt_2D(pts2d, Colr.white)
+    #if len(pts2d) > 0:
+    #    draw_pt_2D(pts2d, Colr.white)
+    draw_pt_2D(pts2d, Colr.white)
     #for i in pts2d:
     #    draw_pt_2D(i, Colr.white)
     #print("draw_pt_2D(guide2d, Colr.green)", guide2d)
-    draw_pt_2D([guide2d], Colr.green)
+    draw_pt_2D(guide2d, Colr.green)
 
     # display number of segments
     if self.paused and self.stage < ARCH_EXTRUDE_1:
         if guide2d is not None:
-            self.segm_cntr.draw(self.segm_cnt, guide2d)
+            self.segm_cntr.draw(self.segm_cnt, guide2d[0])
             #self.segm_cntr.draw(self.segm_cnt, self.mouse_loc)
 
     self.helpdisp.draw()
@@ -1443,11 +1469,11 @@ class ModalArchTool(bpy.types.Operator):
                     self.snap.grab(self.curr_ed_type)
                 elif self.stage == ARCH_EXTRUDE_1:
                     bpy.ops.transform.resize('INVOKE_DEFAULT',
-                            constraint_orientation = 'GLOBAL')
+                            orient_type='GLOBAL')
                 else:
                     bpy.ops.transform.translate('INVOKE_DEFAULT',
                             constraint_axis=(False, False, True),
-                            constraint_orientation='NORMAL',
+                            orient_type='NORMAL',
                             release_confirm=True)
 
         if self.paused:
