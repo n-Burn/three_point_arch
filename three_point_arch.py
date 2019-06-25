@@ -1417,7 +1417,7 @@ def segm_decrm(self):
 
 
 class ModalArchTool(bpy.types.Operator):
-    '''Draw a line with the mouse'''
+    '''Launch the arch tool'''
     bl_idname = "view3d.modal_arch_tool"
     bl_label = "Three Point Arch Tool"
 
