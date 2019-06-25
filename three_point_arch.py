@@ -19,7 +19,7 @@ END GPL LICENSE BLOCK
 
 #============================================================================
 
- [Stage]    [Event that ends stage]
+ [Stage]   [Event that ends stage]
 * Stage 0 - No points placed, add-on just launched and is initializing
 * Stage 1 - 1st point placed
 * Stage 2 - 2nd point placed (1st to 2nd point is arc width)
@@ -1306,7 +1306,7 @@ def segm_decrm(self):
 
 
 class ModalArchTool(bpy.types.Operator):
-    '''Draw a line with the mouse'''
+    '''Launch the arch tool'''
     bl_idname = "view3d.modal_arch_tool"
     bl_label = "Three Point Arch Tool"
 
