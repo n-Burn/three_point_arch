@@ -19,7 +19,7 @@ END GPL LICENSE BLOCK
 
 #============================================================================
 
- [Stage]    [Event that ends stage]
+ [Stage]   [Event that ends stage]
 * Stage 0 - No points placed, add-on just launched and is initializing
 * Stage 1 - 1st point placed
 * Stage 2 - 2nd point placed (1st to 2nd point is arc width)
@@ -216,7 +216,6 @@ def init_blender_settings():
     bpy.context.tool_settings.use_snap = False
     bpy.context.tool_settings.snap_elements = {'VERTEX'}
     bpy.context.tool_settings.snap_target = 'CLOSEST'
-    #bpy.context.tool_settings.snap_target = 'ACTIVE'
     bpy.context.tool_settings.transform_pivot_point = 'ACTIVE_ELEMENT'
     bpy.context.scene.transform_orientation_slots[0].type = 'GLOBAL'
     bpy.context.space_data.show_gizmo = False
@@ -342,18 +341,6 @@ class DrawSegmCounter:
         blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
 
-
-# debug?
-'''
-def draw_text(dpi, text, pos, size, colr):
-    if pos is not None:
-        font_id = 0
-        #bgl.glColor4f(*colr)
-        blf.color(font_id, colr)
-        blf.size(font_id, size, dpi)
-        blf.position(font_id, pos[0], pos[1], 0)
-        blf.draw(font_id, text)
-'''
 
 class HelpText:
     def get_size(self):
@@ -529,6 +516,16 @@ class HelpBar:
             self.bndry[1] = self.get_bar_co(left, right, btm2, top2)
 
     def draw(self):
+        for b in range(self.barcnt):
+            indc = (0, 1, 2), (2, 3, 0)
+            #print("self.bdry:",self.bdry[b])
+            shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+            batch = batch_for_shader(shader, 'TRIS', {"pos": self.bndry[b]}, indices=indc)
+            shader.bind()
+            shader.uniform_float("color", self.colr)
+            batch.draw(shader)
+        for i in self.help_txts:
+            i.draw_wrapper()
         '''
         bgl.glColor4f(*self.colr)
         for b in range(self.barcnt):
@@ -540,16 +537,6 @@ class HelpBar:
         for i in self.help_txts:
             i.draw_wrapper()
         '''
-        for b in range(self.barcnt):
-            indc = (0, 1, 2), (2, 3, 0)
-            #print("self.bdry:",self.bdry[b])
-            shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-            batch = batch_for_shader(shader, 'TRIS', {"pos": self.bndry[b]}, indices=indc)
-            shader.bind()
-            shader.uniform_float("color", self.colr)
-            batch.draw(shader)
-        for i in self.help_txts:
-            i.draw_wrapper()
 
 
 class HelpDisplay:
@@ -697,6 +684,13 @@ def get_rotated_pt(piv_co, mov_co, ang_rad, piv_norm):
 
 def draw_pt_2D(pt_co, pt_color):
     if pt_co is not None:
+        bgl.glPointSize(10)
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'POINTS', {"pos": pt_co})
+        shader.bind()
+        shader.uniform_float("color", pt_color)
+        batch.draw(shader)
+        bgl.glPointSize(1)
         '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(10)
@@ -705,18 +699,17 @@ def draw_pt_2D(pt_co, pt_color):
         bgl.glVertex2f(*pt_co)
         bgl.glEnd()
         '''
-        bgl.glPointSize(10)
-        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'POINTS', {"pos": pt_co})
-        shader.bind()
-        shader.uniform_float("color", pt_color)
-        batch.draw(shader)
-        bgl.glPointSize(1)
     return
 
 
 def draw_line_2D(pt_co_1, pt_co_2, pt_color):
     if None not in (pt_co_1, pt_co_2):
+        coords = [pt_co_1, pt_co_2]
+        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
+        batch = batch_for_shader(shader, 'LINES', {"pos": coords})
+        shader.bind()
+        shader.uniform_float("color", pt_color)
+        batch.draw(shader)
         '''
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glPointSize(7)
@@ -726,42 +719,10 @@ def draw_line_2D(pt_co_1, pt_co_2, pt_color):
         bgl.glVertex2f(*pt_co_2)
         bgl.glEnd()
         '''
-        coords = [pt_co_1, pt_co_2]
-        shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
-        batch = batch_for_shader(shader, 'LINES', {"pos": coords})
-        shader.bind()
-        shader.uniform_float("color", pt_color)
-        batch.draw(shader)
     return
 
 
 def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
-    '''
-    orig2d = loc3d_to_reg2d(reg, rv3d, orig)
-    # returns None when 3d point is not inside active 3D View
-    if orig2d is not None:
-        draw_pt_2D(orig2d, Colr.white)
-    ang_incr = abs(ang_meas / steps)
-    bgl.glColor4f(*color)
-    bgl.glBegin(bgl.GL_LINE_STRIP)
-    curr_ang = 0.0
-    while curr_ang <= ang_meas:
-        new_pt = get_rotated_pt(orig, pts[0], curr_ang, piv_norm)
-        new_pt2d = loc3d_to_reg2d(reg, rv3d, new_pt)
-        if new_pt2d is not None:
-            bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
-        curr_ang = curr_ang + ang_incr
-    new_pt2d = loc3d_to_reg2d(reg, rv3d, pts[1])
-    if new_pt2d is not None:
-        bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
-    bgl.glEnd()
-    return
-
-    if orig2d is not None:
-        #print("draw_pt_2D(orig2d, Colr.white)", orig2d)
-        draw_pt_2D([orig2d], Colr.white)
-        #coords.append(orig2d)
-    '''
     orig2d = safe_loc3d_to_reg2d(reg, rv3d, [orig])
     draw_pt_2D(orig2d, Colr.white)
     ang_incr = abs(ang_meas / steps)
@@ -787,6 +748,27 @@ def draw_circ_arch_3D(steps, pts, orig, ang_meas, piv_norm, color, reg, rv3d):
         shader.uniform_float("color", color)
         batch.draw(shader)
     return
+    '''
+    orig2d = loc3d_to_reg2d(reg, rv3d, orig)
+    # returns None when 3d point is not inside active 3D View
+    if orig2d is not None:
+        draw_pt_2D(orig2d, Colr.white)
+    ang_incr = abs(ang_meas / steps)
+    bgl.glColor4f(*color)
+    bgl.glBegin(bgl.GL_LINE_STRIP)
+    curr_ang = 0.0
+    while curr_ang <= ang_meas:
+        new_pt = get_rotated_pt(orig, pts[0], curr_ang, piv_norm)
+        new_pt2d = loc3d_to_reg2d(reg, rv3d, new_pt)
+        if new_pt2d is not None:
+            bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
+        curr_ang = curr_ang + ang_incr
+    new_pt2d = loc3d_to_reg2d(reg, rv3d, pts[1])
+    if new_pt2d is not None:
+        bgl.glVertex2f(new_pt2d[X], new_pt2d[Y])
+    bgl.glEnd()
+    return
+    '''
 
 
 # Refreshes mesh drawing in 3D view and updates mesh coordinate
