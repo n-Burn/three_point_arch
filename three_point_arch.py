@@ -64,7 +64,7 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (2, 70, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
@@ -116,7 +116,7 @@ class Colr:
 
 
 # Defines the settings part in the addons tab:
-class TPArchPrefs(bpy.types.AddonPreferences):
+class TPARCH_prefs(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     np_scale_dist = bpy.props.FloatProperty(
@@ -199,7 +199,6 @@ def init_blender_settings():
     bpy.context.tool_settings.use_snap = False
     bpy.context.tool_settings.snap_element = 'VERTEX'
     bpy.context.tool_settings.snap_target = 'CLOSEST'
-    #bpy.context.tool_settings.snap_target = 'ACTIVE'
     bpy.context.space_data.pivot_point = 'ACTIVE_ELEMENT'
     bpy.context.space_data.transform_orientation = 'GLOBAL'
     bpy.context.space_data.show_manipulator = False
@@ -322,17 +321,6 @@ class DrawSegmCounter:
         blf.position(self.font_id, seg_cnt_co[0], seg_cnt_co[1], 0)
         blf.draw(self.font_id, str(cnt))
 
-
-# debug?
-'''
-def draw_text(dpi, text, pos, size, colr):
-    if pos is not None:
-        font_id = 0
-        bgl.glColor4f(*colr)
-        blf.size(font_id, size, dpi)
-        blf.position(font_id, pos[0], pos[1], 0)
-        blf.draw(font_id, text)
-'''
 
 class HelpText:
     def get_size(self):
@@ -757,8 +745,7 @@ class SnapPoint():
     def grab(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
-            #bpy.context.scene.objects[0].location = ms_loc_3d
+            self.point.select = True
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
@@ -773,8 +760,8 @@ class SnapPoint():
         ms_loc_3d = self.get_mouse_3d(ms_loc_2d)
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
-            self.ob[0].location = ms_loc_3d
+            self.point.select = True
+            self.point.location = ms_loc_3d
         '''
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -794,7 +781,7 @@ class SnapPoint():
     def remove(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[0].select = True
+            self.point.select = True
             bpy.ops.object.delete()
         '''
         elif ed_type == 'EDIT_MESH':
@@ -813,7 +800,7 @@ class SnapPoint():
 
     def move(self, ed_type, new_co):
         if ed_type == 'OBJECT':
-            self.ob[0].location = new_co.copy()
+            self.point.location = new_co.copy()
 
 
 def exit_addon(self):
@@ -935,10 +922,10 @@ def click_handler(self, context):
             add_pt(self, snap)
             self.stage += 1
 
-            bpy.context.scene.objects[0].location = self.circ_cen.copy()
+            self.snap.move(self.curr_ed_type, self.circ_cen.copy())
             bpy.ops.object.editmode_toggle()
             self.curr_ed_type = context.mode
-            inv_mw = bpy.context.scene.objects[0].matrix_world.inverted()
+            inv_mw = self.snap.point.matrix_world.inverted()
             piv_cent = inv_mw * self.circ_cen
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
             bm.verts.new(inv_mw * self.new_pts[0])
@@ -1305,7 +1292,7 @@ def segm_decrm(self):
         self.segm_cnt -= 1
 
 
-class ModalArchTool(bpy.types.Operator):
+class TPARCH_OT_modal(bpy.types.Operator):
     '''Launch the arch tool'''
     bl_idname = "view3d.modal_arch_tool"
     bl_label = "Three Point Arch Tool"
@@ -1465,7 +1452,7 @@ class ModalArchTool(bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class TPArchPanel(bpy.types.Panel):
+class TPARCH_PT_panel(bpy.types.Panel):
     # Creates a panel in the 3d view Toolshelf window
     bl_label = 'Arch Panel'
     bl_idname = 'TPArch_base_panel'
@@ -1481,14 +1468,14 @@ class TPArchPanel(bpy.types.Panel):
 
 
 def register():
-    bpy.utils.register_class(TPArchPrefs)
-    bpy.utils.register_class(ModalArchTool)
-    bpy.utils.register_class(TPArchPanel)
+    bpy.utils.register_class(TPARCH_prefs)
+    bpy.utils.register_class(TPARCH_OT_modal)
+    bpy.utils.register_class(TPARCH_PT_panel)
 
 def unregister():
-    bpy.utils.unregister_class(TPArchPanel)
-    bpy.utils.unregister_class(ModalArchTool)
-    bpy.utils.unregister_class(TPArchPrefs)
+    bpy.utils.unregister_class(TPARCH_PT_panel)
+    bpy.utils.unregister_class(TPARCH_OT_modal)
+    bpy.utils.unregister_class(TPARCH_prefs)
 
 if __name__ == "__main__":
     register()
