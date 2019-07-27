@@ -64,7 +64,7 @@ Possible To-Do
 bl_info = {
     "name": "Three Point Arch Tool",
     "author": "nBurn",
-    "version": (0, 1, 1),
+    "version": (0, 1, 2),
     "blender": (2, 80, 0),
     "location": "View3D > Tools Panel",
     "description": "Tool for creating arches",
@@ -133,7 +133,7 @@ class Colr:
 
 
 # Defines the settings part in the addons tab:
-class TPArchPrefs(bpy.types.AddonPreferences):
+class TPARCH_prefs(bpy.types.AddonPreferences):
     bl_idname = __name__
 
     np_scale_dist: bpy.props.FloatProperty(
@@ -518,7 +518,6 @@ class HelpBar:
     def draw(self):
         for b in range(self.barcnt):
             indc = (0, 1, 2), (2, 3, 0)
-            #print("self.bdry:",self.bdry[b])
             shader = gpu.shader.from_builtin('2D_UNIFORM_COLOR')
             batch = batch_for_shader(shader, 'TRIS', {"pos": self.bndry[b]}, indices=indc)
             shader.bind()
@@ -822,8 +821,7 @@ class SnapPoint():
     def grab(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[-1].select_set(True)
-            #bpy.context.scene.objects[0].location = ms_loc_3d
+            self.point.select_set(True)
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
@@ -838,8 +836,8 @@ class SnapPoint():
         ms_loc_3d = self.get_mouse_3d(ms_loc_2d)
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[-1].select_set(True)
-            self.ob[-1].location = ms_loc_3d
+            self.point.select_set(True)
+            self.point.location = ms_loc_3d
             '''        '''
         elif ed_type == 'EDIT_MESH':
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -859,7 +857,7 @@ class SnapPoint():
     def remove(self, ed_type, sel_backup=None):
         if ed_type == 'OBJECT':
             bpy.ops.object.select_all(action='DESELECT')
-            self.ob[-1].select_set(True)
+            self.point.select_set(True)
             bpy.ops.object.delete()
             '''        '''
         elif ed_type == 'EDIT_MESH':
@@ -878,7 +876,7 @@ class SnapPoint():
 
     def move(self, ed_type, new_co):
         if ed_type == 'OBJECT':
-            self.ob[-1].location = new_co.copy()
+            self.point.location = new_co.copy()
 
 
 def exit_addon(self):
@@ -1000,10 +998,10 @@ def click_handler(self, context):
             add_pt(self, snap)
             self.stage += 1
 
-            bpy.context.scene.objects[-1].location = self.circ_cen.copy()
+            self.snap.move(self.curr_ed_type, self.circ_cen.copy())
             bpy.ops.object.editmode_toggle()
             self.curr_ed_type = context.mode
-            inv_mw = bpy.context.scene.objects[-1].matrix_world.inverted()
+            inv_mw = self.snap.point.matrix_world.inverted()
             piv_cent = inv_mw @ self.circ_cen
             bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
             bm.verts.new(inv_mw @ self.new_pts[0])
@@ -1416,7 +1414,7 @@ def segm_decrm(self):
         self.segm_cnt -= 1
 
 
-class ModalArchTool(bpy.types.Operator):
+class TPARCH_OT_modal(bpy.types.Operator):
     '''Launch the arch tool'''
     bl_idname = "view3d.modal_arch_tool"
     bl_label = "Three Point Arch Tool"
@@ -1591,14 +1589,14 @@ class TPARCH_PT_panel(bpy.types.Panel):
 
 
 def register():
-    bpy.utils.register_class(TPArchPrefs)
-    bpy.utils.register_class(ModalArchTool)
+    bpy.utils.register_class(TPARCH_prefs)
+    bpy.utils.register_class(TPARCH_OT_modal)
     bpy.utils.register_class(TPARCH_PT_panel)
 
 def unregister():
     bpy.utils.unregister_class(TPARCH_PT_panel)
-    bpy.utils.unregister_class(ModalArchTool)
-    bpy.utils.unregister_class(TPArchPrefs)
+    bpy.utils.unregister_class(TPARCH_OT_modal)
+    bpy.utils.unregister_class(TPARCH_prefs)
 
 if __name__ == "__main__":
     register()
